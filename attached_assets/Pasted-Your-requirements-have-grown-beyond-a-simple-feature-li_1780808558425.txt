@@ -1,0 +1,868 @@
+Your requirements have grown beyond a simple feature list and are now at the level of a complete Enterprise Ticketing, Project Management, Workflow & Collaboration System. For an actual FRD submitted to management, architects, or developers, the document should be structured as follows.
+
+---
+
+# FUNCTIONAL REQUIREMENTS DOCUMENT (FRD)
+
+## Project Name
+
+Enterprise Ticketing, Project Management & Workflow Management System
+
+---
+
+# 1. PURPOSE
+
+The purpose of this system is to provide a centralized platform for:
+
+* Ticket Management
+* Project Management
+* To-Do Management
+* Employee Task Tracking
+* SLA Monitoring
+* Escalation Management
+* Team Collaboration
+* Google Workspace Integration
+* File Management
+* Audit Tracking
+* Dashboard Analytics
+
+The system shall provide complete visibility from Employee → Team Leader → Assistant Manager → Manager hierarchy.
+
+---
+
+# 2. USER ROLES
+
+## Employee
+
+Can:
+
+* Create Tickets
+* Create Personal To-Do
+* View Own Tickets
+* View Own Projects
+* Update Assigned Tasks
+* Upload Files
+* Enter Timesheets
+
+---
+
+## Team Leader
+
+Can:
+
+* Create Tickets
+* Assign Tickets
+* Create Team To-Do
+* Monitor Team Activities
+* View Team Projects
+* Escalate Tickets
+* Approve Tasks
+
+---
+
+## Assistant Manager
+
+Can:
+
+* View Team Leaders
+* View Team Activities
+* Assign Tasks
+* Monitor SLA
+* Review Projects
+
+---
+
+## Manager / Head IT
+
+Can:
+
+* Create Projects
+* Create Tickets
+* Assign Tickets
+* Manage Teams
+* Monitor Department
+* Manage SLA
+* Configure System
+
+---
+
+## Administrator
+
+Can:
+
+* Configure Entire System
+* Manage Users
+* Manage Roles
+* Manage Permissions
+* Manage Settings
+* Manage Masters
+
+---
+
+# 3. AUTHENTICATION MODULE
+
+## Login
+
+Fields:
+
+* Username
+* Password
+* Department / Ward
+
+Validation:
+
+* Username Mandatory
+* Password Mandatory
+
+---
+
+## Welcome Dialog
+
+After successful login:
+
+Display:
+
+* Employee Name
+* Employee Code
+* Department
+* Current Date
+* Last Login
+
+Buttons:
+
+* Continue
+
+---
+
+## Reminder Popup
+
+After Welcome Dialog:
+
+Show:
+
+* Pending Tickets
+* Pending Approvals
+* Overdue Tasks
+* Overdue Projects
+* Pending To-Do
+* Upcoming Meetings
+
+Actions:
+
+* Open
+* Snooze
+* Dismiss
+
+---
+
+# 4. USER MANAGEMENT
+
+## User Creation
+
+Fields:
+
+* Employee Code
+* Employee Name
+* Email
+* Mobile
+* Department
+* Designation
+* Role
+* Reporting Manager
+* Status
+
+---
+
+## Department Management
+
+CRUD Operations
+
+---
+
+## Role Management
+
+CRUD Operations
+
+---
+
+## User Upload
+
+* Excel Upload
+* Template Download
+
+---
+
+## User Export
+
+* Excel
+* PDF
+* CSV
+
+---
+
+# 5. ROLE BASED ACCESS CONTROL (RBAC)
+
+Permissions available at:
+
+* Module Level
+* Menu Level
+* Screen Level
+* Button Level
+* Field Level
+* Record Level
+
+Actions:
+
+* View
+* Create
+* Edit
+* Delete
+* Approve
+* Reject
+* Export
+* Import
+* Assign
+
+---
+
+# 6. DASHBOARD MODULE
+
+## Employee Dashboard
+
+Counters:
+
+* Total Tickets
+* Open
+* Pending
+* In Progress
+* Completed
+* Closed
+* My To-Do
+* My Projects
+
+Widgets:
+
+* Calendar
+* Notifications
+* Recent Activities
+
+---
+
+## Team Leader Dashboard
+
+Can View:
+
+* Own Dashboard
+* Team Dashboard
+
+Additional Counters:
+
+* Team Tickets
+* Team Projects
+* Team To-Do
+* Escalated Tickets
+
+---
+
+## Manager Dashboard
+
+Can View:
+
+* Entire Department
+
+Additional Counters:
+
+* SLA Breaches
+* Pending Approvals
+* Escalations
+* Project Health
+
+---
+
+# 7. COMMON WORKLIST
+
+Purpose:
+
+Central ticket pool.
+
+Features:
+
+* Search
+* Filter
+* Pagination
+* Sorting
+* LIFO Order
+
+Actions:
+
+* Pick Ticket
+* Assign Ticket
+* View Attachment
+
+---
+
+## Escalation Rule
+
+If ticket not picked:
+
+5 Hours:
+
+* Red Zone
+* Notify Team Members
+* Notify Team Leader
+
+10 Hours:
+
+* Notify Assistant Manager
+
+15 Hours:
+
+* Notify Manager
+
+Repeat every 5 hours until picked.
+
+---
+
+# 8. RAISE TICKET MODULE
+
+Types:
+
+* Self Assign Ticket
+* Raise Ticket
+
+Fields:
+
+* Subject
+* Description
+* Priority
+* Category
+* Attachment
+* Assigned To
+* Assigned CC
+
+Attachments:
+
+Maximum 10 MB
+
+---
+
+# 9. ROUTINE TASK MANAGEMENT
+
+Types:
+
+* Daily
+* Weekly
+* Monthly
+* Yearly
+
+System automatically generates tasks based on schedule.
+
+---
+
+# 10. MY TICKET WORKLIST
+
+Statuses:
+
+* YTS
+* Open
+* Assigned
+* Acknowledged
+* In Progress
+* Pending
+* Hold
+* Forwarded
+* Reassigned
+* Verify In Process
+* Completed
+* Closed
+* Reopened
+* Rejected
+
+Features:
+
+* Search
+* Filter
+* Comments
+* Attachments
+
+---
+
+## Ticket Aging
+
+Display:
+
+* Created Date
+* Started Date
+* Pending Days
+* Resolution Days
+* Closed Days
+
+---
+
+## Pending Rule
+
+No update for 48 Hours:
+
+In Progress → Pending
+
+Notification triggered.
+
+---
+
+# 11. TICKET VERIFICATION
+
+Actions:
+
+* Approve
+* Reopen
+* Hold
+
+Approval closes ticket.
+
+---
+
+## Auto Closure
+
+If user does not verify within 48 hours:
+
+System auto closes ticket.
+
+---
+
+# 12. TICKET FORWARDING
+
+Actions:
+
+* Forward
+* Accept
+* Reject
+
+History maintained.
+
+---
+
+# 13. TICKET MONITORING
+
+Assigned CC users can monitor ticket progress.
+
+Features:
+
+* Search
+* Filter
+* Timeline View
+
+---
+
+# 14. TO-DO MANAGEMENT
+
+## Personal To-Do
+
+Employee can create own To-Do.
+
+Fields:
+
+* Title
+* Date
+* Priority
+* Reminder
+
+---
+
+## Team To-Do
+
+Team Leader can assign To-Do.
+
+Business Rule:
+
+Task shall automatically appear on employee's calendar date.
+
+---
+
+## To-Do Counter
+
+When all tasks completed:
+
+Count = 0
+
+---
+
+## Convert To-Do to Ticket
+
+Supported.
+
+---
+
+# 15. PROJECT MANAGEMENT
+
+## Project Creation
+
+Fields:
+
+* Project No
+* Project Type
+* Title
+* Description
+* Start Date
+* End Date
+* Priority
+* Category
+* Project Owner
+* Process Owner
+* Collaborators
+* Review Frequency
+
+---
+
+## Project Progress Tracking
+
+Circular Progress Indicator
+
+Range:
+
+0% - 100%
+
+Progress History maintained.
+
+---
+
+## Project Status
+
+* Created
+* Planning
+* Requirement Gathering
+* Design
+* Development
+* UAT
+* On Hold
+* Go Live
+* Monitoring
+* Completed
+* Cancelled
+
+---
+
+# 16. PROJECT COLLABORATORS
+
+Actions:
+
+* Add Member
+* Remove Member
+* Replace Member
+
+All changes audited.
+
+---
+
+# 17. FILE MANAGEMENT
+
+Features:
+
+* Create Folder
+* Rename Folder
+* Delete Folder
+* Upload File
+* Download File
+* Preview File
+
+Maximum File Size:
+
+10 MB
+
+Profile Image:
+
+5 MB
+
+---
+
+# 18. CALENDAR MANAGEMENT
+
+Views:
+
+* Day
+* Week
+* Month
+
+Features:
+
+* Event Creation
+* Meeting Scheduling
+* Reminders
+
+---
+
+# 19. GOOGLE MEET INTEGRATION
+
+System shall:
+
+* Create Meeting Link
+* Invite Participants
+* Send Calendar Invitation
+
+---
+
+# 20. GOOGLE SPACE INTEGRATION
+
+Project Creation:
+
+Automatically create space.
+
+Members:
+
+* Project Owner
+* Process Owner
+* Collaborators
+
+Project Updates:
+
+Automatically synchronize members.
+
+---
+
+# 21. TIMESHEET MANAGEMENT
+
+Capture:
+
+* Login Time
+* Logout Time
+* Task Hours
+* Project Hours
+* Ticket Hours
+
+Reports:
+
+* Daily
+* Weekly
+* Monthly
+
+---
+
+# 22. ICU MONITORING SCREEN
+
+Live Dashboard
+
+Display:
+
+* Active Tickets
+* Open Tickets
+* SLA Breaches
+* Escalations
+* Project Status
+* Team Performance
+
+Auto Refresh:
+
+30 Seconds
+
+---
+
+# 23. NOTIFICATION ENGINE
+
+Channels:
+
+* SignalR
+* Email
+* Dashboard
+* Google Space
+
+Notifications:
+
+* Ticket Creation
+* Assignment
+* Reassignment
+* Project Creation
+* Project Update
+* SLA Breach
+* Escalation
+* Approval
+* Rejection
+
+---
+
+# 24. AUDIT LOG MANAGEMENT
+
+Track:
+
+* Create
+* Update
+* Delete
+* Login
+* Logout
+* Approvals
+
+Capture:
+
+* Old Value
+* New Value
+* User
+* Timestamp
+* IP Address
+
+Inline audit available on every record.
+
+---
+
+# 25. REPORTS & EXPORTS
+
+Exports:
+
+* Excel
+* PDF
+* CSV
+
+Reports:
+
+* Ticket Reports
+* SLA Reports
+* Escalation Reports
+* Project Reports
+* To-Do Reports
+* Timesheet Reports
+* User Reports
+* Audit Reports
+
+---
+
+# 26. SETTINGS & MASTER CONFIGURATION
+
+Masters:
+
+* Department
+* Role
+* Designation
+* Priority
+* Category
+* Ticket Status
+* Project Status
+* SLA Rules
+* Holidays
+* Shift Timings
+* Notification Templates
+
+---
+
+# NON-FUNCTIONAL REQUIREMENTS
+
+## Security
+
+* JWT Authentication
+* Password Encryption
+* RBAC Security
+* Session Timeout
+* HTTPS Enforcement
+* Audit Logging
+
+---
+
+## Performance
+
+* Page Load ≤ 3 Seconds
+* Search Response ≤ 2 Seconds
+* Dashboard Load ≤ 5 Seconds
+* Notification Delivery ≤ 5 Seconds
+
+---
+
+## Scalability
+
+* 10,000+ Users
+* 100,000+ Tickets
+* 10 TB File Storage
+
+---
+
+## Availability
+
+* 99.9% Uptime
+* Disaster Recovery
+* Daily Backup
+
+---
+
+## Reliability
+
+* Zero Data Loss
+* Transaction Rollback
+* Automatic Recovery
+
+---
+
+## Maintainability
+
+* Modular Architecture
+* API Driven Design
+* Version Control Support
+
+---
+
+## Compatibility
+
+Supported Browsers:
+
+* Chrome
+* Edge
+* Firefox
+* Safari
+
+Supported Devices:
+
+* Desktop
+* Tablet
+* Mobile
+
+---
+
+## Logging & Monitoring
+
+* Application Logs
+* Error Logs
+* API Logs
+* Database Logs
+* User Activity Logs
+
+---
+
+# TESTING REQUIREMENTS
+
+## Functional Testing
+
+* User Management
+* Ticket Workflow
+* Project Workflow
+* To-Do Workflow
+* Notifications
+
+## Security Testing
+
+* Authentication
+* Authorization
+* RBAC Validation
+* Session Testing
+
+## Performance Testing
+
+* Load Testing
+* Stress Testing
+* Concurrency Testing
+
+## Integration Testing
+
+* Google Calendar
+* Google Meet
+* Google Space
+* Email Services
+
+## UAT Testing
+
+* Business Workflow Validation
+* SLA Validation
+* Escalation Validation
+* Project Lifecycle Validation
+
+## Regression Testing
+
+* Existing Feature Validation
+* New Feature Validation
+
+---
+
+**Estimated System Scope:** 30+ modules, 200+ business rules, enterprise-grade workflow management, complete ticketing system, project management, collaboration, audit, notification, and reporting platform. This FRD is suitable as a baseline document for architecture design, effort estimation, UI/UX design, database design, and development planning.
