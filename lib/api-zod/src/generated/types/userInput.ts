@@ -18,4 +18,5 @@ export interface UserInput {
   reportingManagerId?: number;
   password?: string;
   status?: string;
+  avatarUrl?: string;
 }

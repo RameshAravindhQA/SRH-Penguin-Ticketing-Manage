@@ -16,9 +16,7 @@ export default function TicketDetailPage() {
     query: { enabled: !!id, queryKey: getGetTicketQueryKey(id) }
   });
 
-  const { data: comments } = useListTicketComments(id, {
-    query: { enabled: !!id }
-  });
+  const { data: comments } = useListTicketComments(id);
 
   if (isLoading) {
     return (

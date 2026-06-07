@@ -57,10 +57,6 @@ export default function DashboardPage() {
 
   const { data: tickets, isLoading: ticketsLoading } = useListTickets({
     status: statusFilter,
-  }, {
-    query: {
-      enabled: activeTab !== "projects", // don't load tickets if viewing projects tab
-    }
   });
 
   return (

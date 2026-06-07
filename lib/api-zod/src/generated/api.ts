@@ -183,7 +183,8 @@ export const CreateUserBody = zod.object({
   "roleId": zod.number().optional(),
   "reportingManagerId": zod.number().optional(),
   "password": zod.string().optional(),
-  "status": zod.string().optional()
+  "status": zod.string().optional(),
+  "avatarUrl": zod.string().optional()
 })
 
 

@@ -1247,6 +1247,7 @@ components:
         reportingManagerId: { type: integer }
         password: { type: string }
         status: { type: string }
+        avatarUrl: { type: string }
 
     UserUpdate:
       type: object

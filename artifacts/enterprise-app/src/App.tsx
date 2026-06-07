@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { loadSavedTheme } from "@/lib/theme";
 import NotFound from "@/pages/not-found";
 import DashboardPage from "@/pages/dashboard";
 import LoginPage from "@/pages/login";
@@ -26,12 +27,10 @@ const queryClient = new QueryClient();
 
 function ProtectedRoute({ component: Component, ...rest }: any) {
   const { token } = useAuth();
-  
   if (!token) {
     window.location.href = import.meta.env.BASE_URL.replace(/\/$/, "") + "/login";
     return null;
   }
-  
   return <Component {...rest} />;
 }
 
@@ -61,6 +60,8 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => { loadSavedTheme(); }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
