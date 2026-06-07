@@ -1,22 +1,34 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Enterprise Ticketing, Project Management & Workflow System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
-    description: Health operations
+  - name: auth
+  - name: dashboard
+  - name: users
+  - name: departments
+  - name: roles
+  - name: categories
+  - name: tickets
+  - name: worklist
+  - name: projects
+  - name: todos
+  - name: notifications
+  - name: calendar
+  - name: timesheets
+  - name: audit
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +36,1638 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  # ── AUTH ─────────────────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      summary: Change password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+
+  # ── DASHBOARD ────────────────────────────────────────────────────────────────
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/team-stats:
+    get:
+      operationId: getTeamStats
+      tags: [dashboard]
+      summary: Get team member stats
+      responses:
+        "200":
+          description: Team stats
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TeamMemberStats"
+
+  /dashboard/recent-activity:
+    get:
+      operationId: getRecentActivity
+      tags: [dashboard]
+      summary: Get recent activity feed
+      responses:
+        "200":
+          description: Activity list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Activity"
+
+  # ── USERS ────────────────────────────────────────────────────────────────────
+  /users:
+    get:
+      operationId: listUsers
+      tags: [users]
+      summary: List users
+      parameters:
+        - name: department
+          in: query
+          schema: { type: string }
+        - name: role
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Users list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/User"
+    post:
+      operationId: createUser
+      tags: [users]
+      summary: Create user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}:
+    get:
+      operationId: getUser
+      tags: [users]
+      summary: Get user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: User
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateUser
+      tags: [users]
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    delete:
+      operationId: deleteUser
+      tags: [users]
+      summary: Delete user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  # ── DEPARTMENTS ──────────────────────────────────────────────────────────────
+  /departments:
+    get:
+      operationId: listDepartments
+      tags: [departments]
+      summary: List departments
+      responses:
+        "200":
+          description: Departments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Department"
+    post:
+      operationId: createDepartment
+      tags: [departments]
+      summary: Create department
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+
+  /departments/{id}:
+    patch:
+      operationId: updateDepartment
+      tags: [departments]
+      summary: Update department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+    delete:
+      operationId: deleteDepartment
+      tags: [departments]
+      summary: Delete department
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  # ── ROLES ────────────────────────────────────────────────────────────────────
+  /roles:
+    get:
+      operationId: listRoles
+      tags: [roles]
+      summary: List roles
+      responses:
+        "200":
+          description: Roles
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Role"
+    post:
+      operationId: createRole
+      tags: [roles]
+      summary: Create role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+
+  /roles/{id}:
+    patch:
+      operationId: updateRole
+      tags: [roles]
+      summary: Update role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RoleInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Role"
+    delete:
+      operationId: deleteRole
+      tags: [roles]
+      summary: Delete role
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  # ── CATEGORIES ───────────────────────────────────────────────────────────────
+  /categories:
+    get:
+      operationId: listCategories
+      tags: [categories]
+      summary: List categories
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Category"
+    post:
+      operationId: createCategory
+      tags: [categories]
+      summary: Create category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+
+  /categories/{id}:
+    patch:
+      operationId: updateCategory
+      tags: [categories]
+      summary: Update category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CategoryInput"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Category"
+    delete:
+      operationId: deleteCategory
+      tags: [categories]
+      summary: Delete category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  # ── TICKETS ──────────────────────────────────────────────────────────────────
+  /tickets:
+    get:
+      operationId: listTickets
+      tags: [tickets]
+      summary: List tickets
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: priority
+          in: query
+          schema: { type: string }
+        - name: assignedTo
+          in: query
+          schema: { type: integer }
+        - name: projectId
+          in: query
+          schema: { type: integer }
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: fromDate
+          in: query
+          schema: { type: string }
+        - name: toDate
+          in: query
+          schema: { type: string }
+        - name: myTickets
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+    post:
+      operationId: createTicket
+      tags: [tickets]
+      summary: Create ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /tickets/{id}:
+    get:
+      operationId: getTicket
+      tags: [tickets]
+      summary: Get ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Ticket
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+    patch:
+      operationId: updateTicket
+      tags: [tickets]
+      summary: Update ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+    delete:
+      operationId: deleteTicket
+      tags: [tickets]
+      summary: Delete ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /tickets/{id}/status:
+    patch:
+      operationId: updateTicketStatus
+      tags: [tickets]
+      summary: Update ticket status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketStatusUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /tickets/{id}/assign:
+    patch:
+      operationId: assignTicket
+      tags: [tickets]
+      summary: Assign ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketAssign"
+      responses:
+        "200":
+          description: Assigned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /tickets/{id}/forward:
+    post:
+      operationId: forwardTicket
+      tags: [tickets]
+      summary: Forward ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketForward"
+      responses:
+        "200":
+          description: Forwarded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /tickets/{id}/comments:
+    get:
+      operationId: listTicketComments
+      tags: [tickets]
+      summary: List ticket comments
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Comment"
+    post:
+      operationId: addTicketComment
+      tags: [tickets]
+      summary: Add comment to ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Comment"
+
+  # ── WORKLIST ─────────────────────────────────────────────────────────────────
+  /worklist:
+    get:
+      operationId: getWorklist
+      tags: [worklist]
+      summary: Get common worklist (unassigned tickets pool)
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: priority
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Worklist tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ticket"
+
+  /worklist/{id}/pick:
+    post:
+      operationId: pickTicket
+      tags: [worklist]
+      summary: Pick a ticket from the worklist (self-assign)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Picked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  # ── PROJECTS ─────────────────────────────────────────────────────────────────
+  /projects:
+    get:
+      operationId: listProjects
+      tags: [projects]
+      summary: List projects
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: myProjects
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Projects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Project"
+    post:
+      operationId: createProject
+      tags: [projects]
+      summary: Create project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}:
+    get:
+      operationId: getProject
+      tags: [projects]
+      summary: Get project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Project
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+    patch:
+      operationId: updateProject
+      tags: [projects]
+      summary: Update project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+    delete:
+      operationId: deleteProject
+      tags: [projects]
+      summary: Delete project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /projects/{id}/progress:
+    patch:
+      operationId: updateProjectProgress
+      tags: [projects]
+      summary: Update project progress
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProjectProgressUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}/collaborators:
+    post:
+      operationId: addProjectCollaborator
+      tags: [projects]
+      summary: Add collaborator to project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CollaboratorInput"
+      responses:
+        "201":
+          description: Added
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  /projects/{id}/collaborators/{userId}:
+    delete:
+      operationId: removeProjectCollaborator
+      tags: [projects]
+      summary: Remove collaborator from project
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+        - name: userId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Removed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Project"
+
+  # ── TO-DO ────────────────────────────────────────────────────────────────────
+  /todos:
+    get:
+      operationId: listTodos
+      tags: [todos]
+      summary: List todos
+      parameters:
+        - name: type
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: assignedTo
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Todo"
+    post:
+      operationId: createTodo
+      tags: [todos]
+      summary: Create todo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TodoInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Todo"
+
+  /todos/{id}:
+    patch:
+      operationId: updateTodo
+      tags: [todos]
+      summary: Update todo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TodoUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Todo"
+    delete:
+      operationId: deleteTodo
+      tags: [todos]
+      summary: Delete todo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  /todos/{id}/complete:
+    patch:
+      operationId: completeTodo
+      tags: [todos]
+      summary: Mark todo complete/incomplete
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TodoComplete"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Todo"
+
+  /todos/{id}/convert-ticket:
+    post:
+      operationId: convertTodoToTicket
+      tags: [todos]
+      summary: Convert todo to ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "201":
+          description: Ticket created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  # ── NOTIFICATIONS ────────────────────────────────────────────────────────────
+  /notifications:
+    get:
+      operationId: listNotifications
+      tags: [notifications]
+      summary: List notifications
+      parameters:
+        - name: unreadOnly
+          in: query
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: Notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Notification"
+
+  /notifications/{id}/read:
+    patch:
+      operationId: markNotificationRead
+      tags: [notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Marked read
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Notification"
+
+  /notifications/read-all:
+    patch:
+      operationId: markAllNotificationsRead
+      tags: [notifications]
+      summary: Mark all notifications as read
+      responses:
+        "200":
+          description: All marked read
+
+  # ── CALENDAR ─────────────────────────────────────────────────────────────────
+  /calendar/events:
+    get:
+      operationId: listCalendarEvents
+      tags: [calendar]
+      summary: List calendar events
+      parameters:
+        - name: fromDate
+          in: query
+          schema: { type: string }
+        - name: toDate
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Events
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CalendarEvent"
+    post:
+      operationId: createCalendarEvent
+      tags: [calendar]
+      summary: Create calendar event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CalendarEventInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarEvent"
+
+  /calendar/events/{id}:
+    delete:
+      operationId: deleteCalendarEvent
+      tags: [calendar]
+      summary: Delete calendar event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  # ── TIMESHEETS ───────────────────────────────────────────────────────────────
+  /timesheets:
+    get:
+      operationId: listTimesheets
+      tags: [timesheets]
+      summary: List timesheets
+      parameters:
+        - name: userId
+          in: query
+          schema: { type: integer }
+        - name: fromDate
+          in: query
+          schema: { type: string }
+        - name: toDate
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Timesheets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Timesheet"
+    post:
+      operationId: createTimesheet
+      tags: [timesheets]
+      summary: Log timesheet entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TimesheetInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Timesheet"
+
+  # ── AUDIT LOG ────────────────────────────────────────────────────────────────
+  /audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [audit]
+      summary: List audit logs
+      parameters:
+        - name: entityType
+          in: query
+          schema: { type: string }
+        - name: entityId
+          in: query
+          schema: { type: integer }
+        - name: userId
+          in: query
+          schema: { type: integer }
+        - name: fromDate
+          in: query
+          schema: { type: string }
+        - name: toDate
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLog"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
-        status:
-          type: string
-      required:
-        - status
+        status: { type: string }
 
+    # ── AUTH SCHEMAS ────────────────────────────────────────────────────────
+    LoginInput:
+      type: object
+      required: [username, password]
+      properties:
+        username: { type: string }
+        password: { type: string }
+        department: { type: ["string", "null"] }
+
+    AuthResponse:
+      type: object
+      required: [token, user]
+      properties:
+        token: { type: string }
+        user:
+          $ref: "#/components/schemas/User"
+
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string }
+
+    # ── USER SCHEMAS ────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, employeeCode, name, email, role, status, createdAt]
+      properties:
+        id: { type: integer }
+        employeeCode: { type: string }
+        name: { type: string }
+        email: { type: string }
+        mobile: { type: ["string", "null"] }
+        departmentId: { type: ["integer", "null"] }
+        departmentName: { type: ["string", "null"] }
+        designation: { type: ["string", "null"] }
+        role: { type: string }
+        roleId: { type: ["integer", "null"] }
+        reportingManagerId: { type: ["integer", "null"] }
+        reportingManagerName: { type: ["string", "null"] }
+        avatarUrl: { type: ["string", "null"] }
+        status: { type: string }
+        lastLogin: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    UserInput:
+      type: object
+      required: [employeeCode, name, email, role]
+      properties:
+        employeeCode: { type: string }
+        name: { type: string }
+        email: { type: string }
+        mobile: { type: string }
+        departmentId: { type: integer }
+        designation: { type: string }
+        role: { type: string }
+        roleId: { type: integer }
+        reportingManagerId: { type: integer }
+        password: { type: string }
+        status: { type: string }
+
+    UserUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        email: { type: string }
+        mobile: { type: string }
+        departmentId: { type: integer }
+        designation: { type: string }
+        role: { type: string }
+        roleId: { type: integer }
+        reportingManagerId: { type: integer }
+        status: { type: string }
+
+    # ── DEPARTMENT SCHEMAS ──────────────────────────────────────────────────
+    Department:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        headId: { type: ["integer", "null"] }
+        headName: { type: ["string", "null"] }
+        userCount: { type: integer }
+        createdAt: { type: string }
+
+    DepartmentInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        headId: { type: integer }
+
+    # ── ROLE SCHEMAS ────────────────────────────────────────────────────────
+    Role:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        description: { type: ["string", "null"] }
+        level: { type: integer }
+        createdAt: { type: string }
+
+    RoleInput:
+      type: object
+      required: [name, level]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        level: { type: integer }
+
+    # ── CATEGORY SCHEMAS ────────────────────────────────────────────────────
+    Category:
+      type: object
+      required: [id, name, type, createdAt]
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        type: { type: string }
+        description: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    CategoryInput:
+      type: object
+      required: [name, type]
+      properties:
+        name: { type: string }
+        type: { type: string }
+        description: { type: string }
+
+    # ── TICKET SCHEMAS ──────────────────────────────────────────────────────
+    Ticket:
+      type: object
+      required: [id, ticketNo, subject, status, priority, createdAt]
+      properties:
+        id: { type: integer }
+        ticketNo: { type: string }
+        subject: { type: string }
+        description: { type: ["string", "null"] }
+        status: { type: string }
+        priority: { type: string }
+        category: { type: ["string", "null"] }
+        categoryId: { type: ["integer", "null"] }
+        type: { type: string }
+        createdById: { type: integer }
+        createdByName: { type: ["string", "null"] }
+        assignedToId: { type: ["integer", "null"] }
+        assignedToName: { type: ["string", "null"] }
+        assignedToAvatar: { type: ["string", "null"] }
+        projectId: { type: ["integer", "null"] }
+        projectName: { type: ["string", "null"] }
+        dueDate: { type: ["string", "null"] }
+        resolvedAt: { type: ["string", "null"] }
+        closedAt: { type: ["string", "null"] }
+        pendingDays: { type: ["integer", "null"] }
+        slaBreached: { type: boolean }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    TicketInput:
+      type: object
+      required: [subject, priority, type]
+      properties:
+        subject: { type: string }
+        description: { type: string }
+        priority: { type: string }
+        categoryId: { type: integer }
+        type: { type: string }
+        assignedToId: { type: integer }
+        projectId: { type: integer }
+        dueDate: { type: string }
+
+    TicketUpdate:
+      type: object
+      properties:
+        subject: { type: string }
+        description: { type: string }
+        priority: { type: string }
+        categoryId: { type: integer }
+        dueDate: { type: string }
+
+    TicketStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string }
+        remarks: { type: string }
+
+    TicketAssign:
+      type: object
+      required: [assignedToId]
+      properties:
+        assignedToId: { type: integer }
+        remarks: { type: string }
+
+    TicketForward:
+      type: object
+      required: [forwardToId]
+      properties:
+        forwardToId: { type: integer }
+        remarks: { type: string }
+
+    Comment:
+      type: object
+      required: [id, content, authorId, createdAt]
+      properties:
+        id: { type: integer }
+        content: { type: string }
+        authorId: { type: integer }
+        authorName: { type: ["string", "null"] }
+        authorAvatar: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    CommentInput:
+      type: object
+      required: [content]
+      properties:
+        content: { type: string }
+
+    # ── PROJECT SCHEMAS ─────────────────────────────────────────────────────
+    Project:
+      type: object
+      required: [id, projectNo, title, status, priority, createdAt]
+      properties:
+        id: { type: integer }
+        projectNo: { type: string }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        status: { type: string }
+        priority: { type: string }
+        category: { type: ["string", "null"] }
+        type: { type: ["string", "null"] }
+        progress: { type: integer }
+        ownerId: { type: ["integer", "null"] }
+        ownerName: { type: ["string", "null"] }
+        processOwnerId: { type: ["integer", "null"] }
+        processOwnerName: { type: ["string", "null"] }
+        collaborators:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProjectCollaborator"
+        startDate: { type: ["string", "null"] }
+        endDate: { type: ["string", "null"] }
+        reviewFrequency: { type: ["string", "null"] }
+        ticketCount: { type: integer }
+        createdAt: { type: string }
+        updatedAt: { type: string }
+
+    ProjectCollaborator:
+      type: object
+      required: [userId, name]
+      properties:
+        userId: { type: integer }
+        name: { type: string }
+        avatarUrl: { type: ["string", "null"] }
+        role: { type: ["string", "null"] }
+
+    ProjectInput:
+      type: object
+      required: [title, priority]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        priority: { type: string }
+        category: { type: string }
+        type: { type: string }
+        ownerId: { type: integer }
+        processOwnerId: { type: integer }
+        startDate: { type: string }
+        endDate: { type: string }
+        reviewFrequency: { type: string }
+
+    ProjectUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        status: { type: string }
+        priority: { type: string }
+        ownerId: { type: integer }
+        processOwnerId: { type: integer }
+        startDate: { type: string }
+        endDate: { type: string }
+
+    ProjectProgressUpdate:
+      type: object
+      required: [progress]
+      properties:
+        progress: { type: integer }
+        remarks: { type: string }
+
+    CollaboratorInput:
+      type: object
+      required: [userId]
+      properties:
+        userId: { type: integer }
+        role: { type: string }
+
+    # ── TODO SCHEMAS ────────────────────────────────────────────────────────
+    Todo:
+      type: object
+      required: [id, title, status, priority, type, createdAt]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        status: { type: string }
+        priority: { type: string }
+        type: { type: string }
+        dueDate: { type: ["string", "null"] }
+        reminderAt: { type: ["string", "null"] }
+        assignedToId: { type: ["integer", "null"] }
+        assignedToName: { type: ["string", "null"] }
+        createdById: { type: integer }
+        completedAt: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    TodoInput:
+      type: object
+      required: [title, priority, type]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        priority: { type: string }
+        type: { type: string }
+        dueDate: { type: string }
+        reminderAt: { type: string }
+        assignedToId: { type: integer }
+
+    TodoUpdate:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        priority: { type: string }
+        dueDate: { type: string }
+        reminderAt: { type: string }
+
+    TodoComplete:
+      type: object
+      required: [completed]
+      properties:
+        completed: { type: boolean }
+
+    # ── NOTIFICATION SCHEMAS ────────────────────────────────────────────────
+    Notification:
+      type: object
+      required: [id, type, message, isRead, createdAt]
+      properties:
+        id: { type: integer }
+        type: { type: string }
+        message: { type: string }
+        entityType: { type: ["string", "null"] }
+        entityId: { type: ["integer", "null"] }
+        entityRef: { type: ["string", "null"] }
+        isRead: { type: boolean }
+        createdAt: { type: string }
+
+    # ── CALENDAR SCHEMAS ────────────────────────────────────────────────────
+    CalendarEvent:
+      type: object
+      required: [id, title, startDate, type, createdAt]
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        description: { type: ["string", "null"] }
+        startDate: { type: string }
+        endDate: { type: ["string", "null"] }
+        type: { type: string }
+        entityType: { type: ["string", "null"] }
+        entityId: { type: ["integer", "null"] }
+        meetingLink: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    CalendarEventInput:
+      type: object
+      required: [title, startDate, type]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        startDate: { type: string }
+        endDate: { type: string }
+        type: { type: string }
+        meetingLink: { type: string }
+
+    # ── TIMESHEET SCHEMAS ───────────────────────────────────────────────────
+    Timesheet:
+      type: object
+      required: [id, userId, date, hoursWorked, createdAt]
+      properties:
+        id: { type: integer }
+        userId: { type: integer }
+        userName: { type: ["string", "null"] }
+        date: { type: string }
+        loginTime: { type: ["string", "null"] }
+        logoutTime: { type: ["string", "null"] }
+        hoursWorked: { type: number }
+        ticketId: { type: ["integer", "null"] }
+        projectId: { type: ["integer", "null"] }
+        taskDescription: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    TimesheetInput:
+      type: object
+      required: [date, hoursWorked]
+      properties:
+        date: { type: string }
+        loginTime: { type: string }
+        logoutTime: { type: string }
+        hoursWorked: { type: number }
+        ticketId: { type: integer }
+        projectId: { type: integer }
+        taskDescription: { type: string }
+
+    # ── AUDIT LOG SCHEMAS ───────────────────────────────────────────────────
+    AuditLog:
+      type: object
+      required: [id, action, entityType, userId, createdAt]
+      properties:
+        id: { type: integer }
+        action: { type: string }
+        entityType: { type: string }
+        entityId: { type: ["integer", "null"] }
+        entityRef: { type: ["string", "null"] }
+        userId: { type: integer }
+        userName: { type: ["string", "null"] }
+        oldValue: { type: ["string", "null"] }
+        newValue: { type: ["string", "null"] }
+        ipAddress: { type: ["string", "null"] }
+        createdAt: { type: string }
+
+    # ── DASHBOARD SCHEMAS ───────────────────────────────────────────────────
+    DashboardStats:
+      type: object
+      required: [totalTickets, openTickets, pendingTickets, inProgressTickets, completedTickets, closedTickets, projectsAssigned, projectsCompleted, myTodos]
+      properties:
+        totalTickets: { type: integer }
+        openTickets: { type: integer }
+        pendingTickets: { type: integer }
+        inProgressTickets: { type: integer }
+        completedTickets: { type: integer }
+        closedTickets: { type: integer }
+        projectsAssigned: { type: integer }
+        projectsCompleted: { type: integer }
+        myTodos: { type: integer }
+        slaBreaches: { type: integer }
+        escalations: { type: integer }
+        pendingApprovals: { type: integer }
+        totalIncoming: { type: integer }
+        teamTickets: { type: ["integer", "null"] }
+        teamProjects: { type: ["integer", "null"] }
+
+    TeamMemberStats:
+      type: object
+      required: [userId, name, totalTickets]
+      properties:
+        userId: { type: integer }
+        name: { type: string }
+        avatarUrl: { type: ["string", "null"] }
+        totalTickets: { type: integer }
+        openTickets: { type: integer }
+        pendingTickets: { type: integer }
+        inProgressTickets: { type: integer }
+        completedTickets: { type: integer }
+        closedTickets: { type: integer }
+        projectsAssigned: { type: integer }
+        projectsCompleted: { type: integer }
+
+    Activity:
+      type: object
+      required: [id, type, message, createdAt]
+      properties:
+        id: { type: integer }
+        type: { type: string }
+        message: { type: string }
+        entityType: { type: ["string", "null"] }
+        entityId: { type: ["integer", "null"] }
+        entityRef: { type: ["string", "null"] }
+        userId: { type: ["integer", "null"] }
+        userName: { type: ["string", "null"] }
+        createdAt: { type: string }
