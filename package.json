@@ -11,7 +11,7 @@
     "db:push": "node ./scripts/run-local.mjs db-push",
     "db:seed": "node ./scripts/run-local.mjs db-seed",
     "setup:local": "pnpm install && pnpm run db:create && pnpm run db:push && pnpm run db:seed",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
+    "build": "pnpm run typecheck && pnpm -r --filter \"./backend\" --filter \"./frontend\" --filter \"./scripts\" --if-present run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./backend\" --filter \"./frontend\" --filter \"./scripts\" --if-present run typecheck"
   },
