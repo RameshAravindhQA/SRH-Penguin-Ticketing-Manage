@@ -55,6 +55,7 @@ export default function LoginPage() {
             loginAt: new Date().toISOString(),
             lastLogin: data.user.lastLogin || null,
           }));
+          window.dispatchEvent(new Event("srh-login-success"));
           setAuth(data.token, data.user);
           toast.success(`Signed in as ${data.user.name}`);
           setLocation("/dashboard");
@@ -81,7 +82,7 @@ export default function LoginPage() {
           </div>
         </section>
         <section className="relative flex min-h-[54vh] items-center justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-emerald-900 p-4 sm:p-6 lg:min-h-screen">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.22),transparent_30%),radial-gradient(circle_at_80%_70%,rgba(16,185,129,0.2),transparent_35%)]" />
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-emerald-400/10" />
           <Card className="relative w-full max-w-md border-white/20 bg-white/95 shadow-2xl backdrop-blur">
             <CardHeader>
               <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-md bg-blue-600 text-white">

@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/context/AuthContext";
 import {
   useGetDashboardStats,
   useGetMe,
@@ -81,6 +82,7 @@ function dateInRange(value: string, fromDate: string, toDate: string) {
 }
 
 export default function DashboardPage() {
+  const { user: authUser } = useAuth();
   const { data: me } = useGetMe();
   const { data: stats, isLoading: statsLoading, isError: statsError, error: statsErrorDetails, refetch: refetchStats } = useGetDashboardStats();
   const { data: tickets, isLoading: ticketsLoading, refetch: refetchTickets } = useListTickets({});
@@ -95,6 +97,7 @@ export default function DashboardPage() {
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
   const [loginMeta, setLoginMeta] = useState<{ loginAt?: string; lastLogin?: string | null } | null>(null);
+  const currentUser = me || authUser;
 
   const ticketTypes = useMemo(() => {
     return Array.from(new Set((tickets || []).map(ticket => ticket.type).filter(Boolean))).sort();
@@ -103,7 +106,7 @@ export default function DashboardPage() {
   const filteredTickets = useMemo(() => {
     return (tickets || []).filter(ticket => {
       if (!dateInRange(ticket.createdAt, filters.fromDate, filters.toDate)) return false;
-      if (filters.lead === "you" && me?.id && ticket.createdById !== me.id) return false;
+      if (filters.lead === "you" && currentUser?.id && ticket.createdById !== currentUser.id) return false;
       if (filters.member !== "all" && String(ticket.assignedToId || "") !== filters.member) return false;
       if (filters.ticketType !== "all" && ticket.type !== filters.ticketType) return false;
       if (filters.ticketStatus !== "all" && !matchesStatusGroup(ticket.status, filters.ticketStatus)) return false;
@@ -111,7 +114,7 @@ export default function DashboardPage() {
       if (filters.project !== "all" && String(ticket.projectId || "") !== filters.project) return false;
       return true;
     });
-  }, [filters, me?.id, tickets]);
+  }, [currentUser?.id, filters, tickets]);
 
   const visibleTickets = useMemo(() => {
     return filteredTickets.filter(ticket => matchesStatusGroup(ticket.status, activeTab === "projects" ? "all" : activeTab));
@@ -121,10 +124,10 @@ export default function DashboardPage() {
     return (projects || []).filter(project => {
       if (!dateInRange(project.createdAt, filters.fromDate, filters.toDate)) return false;
       if (filters.project !== "all" && String(project.id) !== filters.project) return false;
-      if (filters.lead === "you" && me?.id && project.ownerId !== me.id && project.processOwnerId !== me.id) return false;
+      if (filters.lead === "you" && currentUser?.id && project.ownerId !== currentUser.id && project.processOwnerId !== currentUser.id) return false;
       return true;
     });
-  }, [filters, me?.id, projects]);
+  }, [currentUser?.id, filters, projects]);
 
   const upcomingReminders = useMemo(() => {
     const now = Date.now();
@@ -160,7 +163,7 @@ export default function DashboardPage() {
   }, [refetchProjects, refetchStats, refetchTickets]);
 
   useEffect(() => {
-    if (!me) return;
+    if (!currentUser || welcomeOpen || reminderOpen) return;
     const raw = sessionStorage.getItem("login_welcome");
     if (!raw) return;
     try {
@@ -169,7 +172,22 @@ export default function DashboardPage() {
       setLoginMeta({ loginAt: new Date().toISOString(), lastLogin: null });
     }
     setWelcomeOpen(true);
-  }, [me]);
+  }, [currentUser, reminderOpen, welcomeOpen]);
+
+  useEffect(() => {
+    const openFromLoginEvent = () => {
+      const raw = sessionStorage.getItem("login_welcome");
+      if (!raw) return;
+      try {
+        setLoginMeta(JSON.parse(raw));
+      } catch {
+        setLoginMeta({ loginAt: new Date().toISOString(), lastLogin: null });
+      }
+      setWelcomeOpen(true);
+    };
+    window.addEventListener("srh-login-success", openFromLoginEvent);
+    return () => window.removeEventListener("srh-login-success", openFromLoginEvent);
+  }, []);
 
   const applyFilters = () => setFilters(draftFilters);
   const resetFilters = () => {
@@ -382,7 +400,7 @@ export default function DashboardPage() {
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-white/15">
                 <Sparkles className="h-6 w-6 text-amber-200" />
               </div>
-              <DialogTitle className="text-2xl text-white">Hi {me?.name || "there"}, {wish}</DialogTitle>
+              <DialogTitle className="text-2xl text-white">Hi {currentUser?.name || "there"}, {wish}</DialogTitle>
               <DialogDescription className="text-blue-100">
                 Welcome back to SRH Penguin Ticketing Management System.
               </DialogDescription>
@@ -391,9 +409,9 @@ export default function DashboardPage() {
           <div className="grid gap-4 p-6">
             <div className="grid gap-3 sm:grid-cols-2">
               {[
-                ["Employee Code", me?.employeeCode || "-"],
-                ["Department", me?.departmentName || "Not assigned"],
-                ["Role", me?.role || "-"],
+                ["Employee Code", currentUser?.employeeCode || "-"],
+                ["Department", currentUser?.departmentName || "Not assigned"],
+                ["Role", currentUser?.role || "-"],
                 ["Login Time", loginMeta?.loginAt ? new Date(loginMeta.loginAt).toLocaleString() : new Date().toLocaleString()],
                 ["Last Login", loginMeta?.lastLogin ? new Date(loginMeta.lastLogin).toLocaleString() : "First login"],
                 ["Upcoming Reminders", String(upcomingReminders.length)],
