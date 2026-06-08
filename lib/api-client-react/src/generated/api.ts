@@ -55,10 +55,15 @@ import type {
   TeamMemberStats,
   Ticket,
   TicketAssign,
+  TicketAssignmentHistory,
   TicketForward,
   TicketInput,
+  TicketReopenInput,
+  TicketRoutine,
+  TicketRoutineInput,
   TicketStatusUpdate,
   TicketUpdate,
+  TicketVerifyInput,
   Timesheet,
   TimesheetInput,
   Todo,
@@ -2660,6 +2665,375 @@ export const useAddTicketComment = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getAddTicketCommentMutationOptions(options));
+    }
+
+export const getListTicketAssignmentsUrl = (id: number,) => {
+
+
+
+
+  return `/api/tickets/${id}/assignments`
+}
+
+/**
+ * @summary List ticket assignment history
+ */
+export const listTicketAssignments = async (id: number, options?: RequestInit): Promise<TicketAssignmentHistory[]> => {
+
+  return customFetch<TicketAssignmentHistory[]>(getListTicketAssignmentsUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTicketAssignmentsQueryKey = (id: number,) => {
+    return [
+    `/api/tickets/${id}/assignments`
+    ] as const;
+    }
+
+
+export const getListTicketAssignmentsQueryOptions = <TData = Awaited<ReturnType<typeof listTicketAssignments>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTicketAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTicketAssignmentsQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTicketAssignments>>> = ({ signal }) => listTicketAssignments(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTicketAssignments>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTicketAssignmentsQueryResult = NonNullable<Awaited<ReturnType<typeof listTicketAssignments>>>
+export type ListTicketAssignmentsQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List ticket assignment history
+ */
+
+export function useListTicketAssignments<TData = Awaited<ReturnType<typeof listTicketAssignments>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTicketAssignments>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTicketAssignmentsQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getReopenTicketUrl = (id: number,) => {
+
+
+
+
+  return `/api/tickets/${id}/reopen`
+}
+
+/**
+ * @summary Reopen ticket
+ */
+export const reopenTicket = async (id: number,
+    ticketReopenInput: TicketReopenInput, options?: RequestInit): Promise<Ticket> => {
+
+  return customFetch<Ticket>(getReopenTicketUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      ticketReopenInput,)
+  }
+);}
+
+
+
+
+export const getReopenTicketMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reopenTicket>>, TError,{id: number;data: BodyType<TicketReopenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof reopenTicket>>, TError,{id: number;data: BodyType<TicketReopenInput>}, TContext> => {
+
+const mutationKey = ['reopenTicket'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof reopenTicket>>, {id: number;data: BodyType<TicketReopenInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  reopenTicket(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ReopenTicketMutationResult = NonNullable<Awaited<ReturnType<typeof reopenTicket>>>
+    export type ReopenTicketMutationBody = BodyType<TicketReopenInput>
+    export type ReopenTicketMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Reopen ticket
+ */
+export const useReopenTicket = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof reopenTicket>>, TError,{id: number;data: BodyType<TicketReopenInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof reopenTicket>>,
+        TError,
+        {id: number;data: BodyType<TicketReopenInput>},
+        TContext
+      > => {
+      return useMutation(getReopenTicketMutationOptions(options));
+    }
+
+export const getVerifyTicketUrl = (id: number,) => {
+
+
+
+
+  return `/api/tickets/${id}/verify`
+}
+
+/**
+ * @summary Verify and close or reject ticket
+ */
+export const verifyTicket = async (id: number,
+    ticketVerifyInput: TicketVerifyInput, options?: RequestInit): Promise<Ticket> => {
+
+  return customFetch<Ticket>(getVerifyTicketUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      ticketVerifyInput,)
+  }
+);}
+
+
+
+
+export const getVerifyTicketMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyTicket>>, TError,{id: number;data: BodyType<TicketVerifyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof verifyTicket>>, TError,{id: number;data: BodyType<TicketVerifyInput>}, TContext> => {
+
+const mutationKey = ['verifyTicket'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof verifyTicket>>, {id: number;data: BodyType<TicketVerifyInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  verifyTicket(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type VerifyTicketMutationResult = NonNullable<Awaited<ReturnType<typeof verifyTicket>>>
+    export type VerifyTicketMutationBody = BodyType<TicketVerifyInput>
+    export type VerifyTicketMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Verify and close or reject ticket
+ */
+export const useVerifyTicket = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof verifyTicket>>, TError,{id: number;data: BodyType<TicketVerifyInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof verifyTicket>>,
+        TError,
+        {id: number;data: BodyType<TicketVerifyInput>},
+        TContext
+      > => {
+      return useMutation(getVerifyTicketMutationOptions(options));
+    }
+
+export const getListTicketRoutinesUrl = () => {
+
+
+
+
+  return `/api/ticket-routines`
+}
+
+/**
+ * @summary List routine tickets
+ */
+export const listTicketRoutines = async ( options?: RequestInit): Promise<TicketRoutine[]> => {
+
+  return customFetch<TicketRoutine[]>(getListTicketRoutinesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListTicketRoutinesQueryKey = () => {
+    return [
+    `/api/ticket-routines`
+    ] as const;
+    }
+
+
+export const getListTicketRoutinesQueryOptions = <TData = Awaited<ReturnType<typeof listTicketRoutines>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTicketRoutines>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListTicketRoutinesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listTicketRoutines>>> = ({ signal }) => listTicketRoutines({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listTicketRoutines>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListTicketRoutinesQueryResult = NonNullable<Awaited<ReturnType<typeof listTicketRoutines>>>
+export type ListTicketRoutinesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List routine tickets
+ */
+
+export function useListTicketRoutines<TData = Awaited<ReturnType<typeof listTicketRoutines>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listTicketRoutines>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListTicketRoutinesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateTicketRoutineUrl = () => {
+
+
+
+
+  return `/api/ticket-routines`
+}
+
+/**
+ * @summary Create routine ticket
+ */
+export const createTicketRoutine = async (ticketRoutineInput: TicketRoutineInput, options?: RequestInit): Promise<TicketRoutine> => {
+
+  return customFetch<TicketRoutine>(getCreateTicketRoutineUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      ticketRoutineInput,)
+  }
+);}
+
+
+
+
+export const getCreateTicketRoutineMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTicketRoutine>>, TError,{data: BodyType<TicketRoutineInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createTicketRoutine>>, TError,{data: BodyType<TicketRoutineInput>}, TContext> => {
+
+const mutationKey = ['createTicketRoutine'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createTicketRoutine>>, {data: BodyType<TicketRoutineInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createTicketRoutine(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateTicketRoutineMutationResult = NonNullable<Awaited<ReturnType<typeof createTicketRoutine>>>
+    export type CreateTicketRoutineMutationBody = BodyType<TicketRoutineInput>
+    export type CreateTicketRoutineMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Create routine ticket
+ */
+export const useCreateTicketRoutine = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createTicketRoutine>>, TError,{data: BodyType<TicketRoutineInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createTicketRoutine>>,
+        TError,
+        {data: BodyType<TicketRoutineInput>},
+        TContext
+      > => {
+      return useMutation(getCreateTicketRoutineMutationOptions(options));
     }
 
 export const getGetWorklistUrl = (params?: GetWorklistParams,) => {

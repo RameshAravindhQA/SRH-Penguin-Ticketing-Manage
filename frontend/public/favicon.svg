@@ -1,3 +1,6 @@
-<svg width="180" height="180" viewBox="0 0 180 180" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect width="180" height="180" rx="36" fill="#FF3C00"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="10" fill="#ffffff"/>
+  <text x="6" y="40" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#2f2d68">SRH</text>
+  <circle cx="48" cy="18" r="4" fill="#38a389"/>
+  <path d="M48 22v25M38 35h20" stroke="#38a389" stroke-width="3" stroke-linecap="round"/>
 </svg>

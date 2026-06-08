@@ -15,5 +15,6 @@ export interface UserUpdate {
   role?: string;
   roleId?: number;
   reportingManagerId?: number;
+  avatarUrl?: string;
   status?: string;
 }

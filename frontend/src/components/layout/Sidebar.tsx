@@ -2,14 +2,18 @@ import React from "react";
 import { Link, useLocation } from "wouter";
 import { 
   LayoutDashboard, 
+  Monitor,
   ListTodo, 
   Ticket, 
   FolderKanban, 
   CalendarDays, 
+  BellRing,
   Clock, 
+  CalendarClock,
   Users, 
   Settings, 
   FileText, 
+  BarChart3,
   Bell,
   UserCheck,
   FolderOpen,
@@ -18,15 +22,19 @@ import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/monitor-board", label: "Monitor Board", icon: Monitor },
   { href: "/worklist", label: "Common Worklist", icon: ListTodo },
   { href: "/tickets/new", label: "Raise Ticket", icon: Ticket },
   { href: "/tickets/self-assigned", label: "Self Assign", icon: UserCheck },
+  { href: "/tickets/routines", label: "Routine Tickets", icon: CalendarClock },
   { href: "/tickets", label: "My Tickets", icon: Ticket },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/todos", label: "To-Do", icon: ListTodo },
+  { href: "/reminders", label: "Reminders", icon: BellRing },
   { href: "/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/timesheets", label: "Timesheets", icon: Clock },
   { href: "/documents", label: "Documents", icon: FolderOpen },
+  { href: "/reports", label: "Reports", icon: BarChart3 },
   { href: "/users", label: "Users", icon: Users },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/audit-logs", label: "Audit Logs", icon: FileText },
@@ -43,9 +51,12 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
     )}>
       <div className="h-16 flex items-center justify-center border-b border-sidebar-border">
         {collapsed ? (
-          <div className="font-bold text-xl text-white">SRH</div>
+          <img src="/srh-logo.png" alt="SRH" className="h-9 w-12 rounded bg-white object-contain p-1" />
         ) : (
-          <div className="px-3 text-center text-base font-bold tracking-tight text-white">SRH Penguin Ticketing Management System</div>
+          <div className="flex items-center gap-2 px-3">
+            <img src="/srh-logo.png" alt="SRH" className="h-10 w-20 rounded bg-white object-contain p-1" />
+            <span className="text-sm font-bold leading-tight text-white">Penguin Ticketing Management System</span>
+          </div>
         )}
       </div>
       <nav className="flex-1 overflow-y-auto py-4">

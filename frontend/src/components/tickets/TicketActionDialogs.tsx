@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
 type ActionType = "comment" | "reassign" | "forwardDepartment";
 
@@ -49,6 +50,7 @@ export function TicketActionDialog({
     enabled: action === "forwardDepartment",
   });
   const [remarks, setRemarks] = React.useState("");
+  const [hoursWorked, setHoursWorked] = React.useState("");
   const [selectedUserId, setSelectedUserId] = React.useState("");
   const [selectedDepartmentId, setSelectedDepartmentId] = React.useState("");
   const [saving, setSaving] = React.useState(false);
@@ -56,6 +58,7 @@ export function TicketActionDialog({
   React.useEffect(() => {
     if (ticket && action) {
       setRemarks("");
+      setHoursWorked("");
       setSelectedUserId("");
       setSelectedDepartmentId("");
     }
@@ -91,9 +94,9 @@ export function TicketActionDialog({
       if (action === "comment") {
         await apiFetch(`/api/tickets/${ticket.id}/comments`, {
           method: "POST",
-          body: JSON.stringify({ content: remarks.trim() }),
+          body: JSON.stringify({ content: remarks.trim(), hoursWorked: hoursWorked ? Number(hoursWorked) : undefined }),
         });
-        toast.success("Comment added");
+        toast.success(hoursWorked ? "Comment added and timesheet updated" : "Comment added");
       } else if (action === "reassign") {
         await apiFetch(`/api/tickets/${ticket.id}/reassign`, {
           method: "PATCH",
@@ -156,6 +159,12 @@ export function TicketActionDialog({
             <Label>{action === "comment" ? "Comment" : "Remarks"}</Label>
             <Textarea value={remarks} onChange={(event) => setRemarks(event.target.value)} placeholder="Add work note, reason, or instructions..." />
           </div>
+          {action === "comment" && (
+            <div className="space-y-1.5">
+              <Label>Worked Hours</Label>
+              <Input type="number" min="0" step="0.25" value={hoursWorked} onChange={(event) => setHoursWorked(event.target.value)} placeholder="e.g. 1.5" />
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

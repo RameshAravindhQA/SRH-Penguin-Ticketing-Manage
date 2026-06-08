@@ -31,9 +31,11 @@ import {
   updateSubCategory,
   updateTicketType,
 } from "@/lib/master-data";
+import { useConfirmation } from "@/components/shared/ConfirmationProvider";
 
 // ─── Department Tab ──────────────────────────────────────────────────────────
 function DepartmentsTab() {
+  const confirm = useConfirmation();
   const { data: depts, isLoading } = useListDepartments();
   const createDept = useCreateDepartment();
   const updateDept = useUpdateDepartment();
@@ -64,8 +66,14 @@ function DepartmentsTab() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (!confirm("Delete this department?")) return;
+  const handleDelete = async (id: number) => {
+    const confirmed = await confirm({
+      title: "Delete department?",
+      description: "This department will be removed from settings.",
+      confirmText: "Delete Department",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     deleteDept.mutate({ id }, {
       onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: getListDepartmentsQueryKey() }); },
       onError: () => toast.error("Failed to delete"),
@@ -140,6 +148,7 @@ function DepartmentsTab() {
 
 // ─── Roles Tab ───────────────────────────────────────────────────────────────
 function RolesTab() {
+  const confirm = useConfirmation();
   const { data: roles, isLoading } = useListRoles();
   const createRole = useCreateRole();
   const updateRole = useUpdateRole();
@@ -171,8 +180,14 @@ function RolesTab() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (!confirm("Delete this role?")) return;
+  const handleDelete = async (id: number) => {
+    const confirmed = await confirm({
+      title: "Delete role?",
+      description: "This role will be removed from settings.",
+      confirmText: "Delete Role",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     deleteRole.mutate({ id }, {
       onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: getListRolesQueryKey() }); },
       onError: () => toast.error("Failed to delete"),
@@ -262,6 +277,7 @@ function RolesTab() {
 
 // ─── Categories Tab ──────────────────────────────────────────────────────────
 function CategoriesTab() {
+  const confirm = useConfirmation();
   const { data: cats, isLoading } = useListCategories();
   const { data: ticketTypes, isLoading: typesLoading } = useQuery({ queryKey: ["ticket-types"], queryFn: listTicketTypes });
   const { data: subCategories, isLoading: subsLoading } = useQuery({ queryKey: ["sub-categories"], queryFn: listSubCategories });
@@ -316,8 +332,14 @@ function CategoriesTab() {
     }
   };
 
-  const handleDelete = (id: number) => {
-    if (!confirm("Delete this category?")) return;
+  const handleDelete = async (id: number) => {
+    const confirmed = await confirm({
+      title: "Delete category?",
+      description: "This category will be removed from settings.",
+      confirmText: "Delete Category",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     deleteCat.mutate({ id }, {
       onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: getListCategoriesQueryKey() }); },
       onError: () => toast.error("Failed to delete"),
@@ -332,8 +354,14 @@ function CategoriesTab() {
     else createType.mutate(data, { onSuccess, onError: () => toast.error("Failed to save ticket type") });
   };
 
-  const handleDeleteType = (id: number) => {
-    if (!confirm("Delete this ticket type?")) return;
+  const handleDeleteType = async (id: number) => {
+    const confirmed = await confirm({
+      title: "Delete ticket type?",
+      description: "This ticket type will be removed from settings.",
+      confirmText: "Delete Type",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     deleteType.mutate(id, { onSuccess: () => { toast.success("Ticket type deleted"); qc.invalidateQueries({ queryKey: ["ticket-types"] }); }, onError: () => toast.error("Failed to delete ticket type") });
   };
 
@@ -345,8 +373,14 @@ function CategoriesTab() {
     else createSub.mutate(data, { onSuccess, onError: () => toast.error("Failed to save sub category") });
   };
 
-  const handleDeleteSub = (id: number) => {
-    if (!confirm("Delete this sub category?")) return;
+  const handleDeleteSub = async (id: number) => {
+    const confirmed = await confirm({
+      title: "Delete sub category?",
+      description: "This sub category will be removed from settings.",
+      confirmText: "Delete Sub Category",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     deleteSub.mutate(id, { onSuccess: () => { toast.success("Sub category deleted"); qc.invalidateQueries({ queryKey: ["sub-categories"] }); }, onError: () => toast.error("Failed to delete sub category") });
   };
 
@@ -408,14 +442,14 @@ function CategoriesTab() {
             </div>
             <Button size="sm" className="gap-2" onClick={openAddType}><Plus className="w-4 h-4" /> Add Type</Button>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="max-h-[420px] overflow-auto p-0">
             {typesLoading ? (
               <div className="p-8 text-center text-muted-foreground">Loading...</div>
             ) : !ticketTypes?.length ? (
               <div className="p-8 text-center text-muted-foreground">No ticket types yet.</div>
             ) : (
               <Table>
-                <TableHeader className="bg-slate-50">
+                <TableHeader className="sticky top-0 z-10 bg-slate-50">
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Code</TableHead>
@@ -449,14 +483,14 @@ function CategoriesTab() {
             </div>
             <Button size="sm" className="gap-2" onClick={openAddSub}><Plus className="w-4 h-4" /> Add Sub</Button>
           </CardHeader>
-          <CardContent className="p-0">
+          <CardContent className="max-h-[420px] overflow-auto p-0">
             {subsLoading ? (
               <div className="p-8 text-center text-muted-foreground">Loading...</div>
             ) : !subCategories?.length ? (
               <div className="p-8 text-center text-muted-foreground">No sub categories yet.</div>
             ) : (
               <Table>
-                <TableHeader className="bg-slate-50">
+                <TableHeader className="sticky top-0 z-10 bg-slate-50">
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Category</TableHead>

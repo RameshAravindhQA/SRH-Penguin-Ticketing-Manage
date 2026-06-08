@@ -15,4 +15,19 @@ export interface TicketInput {
   assignedToId?: number;
   projectId?: number;
   dueDate?: string;
+  expectedCloseDate?: string;
+  sourceDepartment?: string;
+  serviceType?: string;
+  location?: string;
+  systemType?: string;
+  systemSubType?: string;
+  reviewSchedule?: number;
+  reviewDays?: string;
+  reviewDuration?: string;
+  isExternal?: boolean;
+  organizationName?: string;
+  providerName?: string;
+  externalPersonRole?: string;
+  externalPhoneNo?: string;
+  supportingPerson?: string;
 }

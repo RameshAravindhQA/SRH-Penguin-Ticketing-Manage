@@ -1,6 +1,6 @@
 import React from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { getListCalendarEventsQueryKey, useListCalendarEvents, useListUsers } from "@workspace/api-client-react";
+import { getListCalendarEventsQueryKey, useListCalendarEvents, useListProjects, useListTickets, useListUsers } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { format, startOfWeek, addDays } from "date-fns";
+import { addDays, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek } from "date-fns";
 import { Calendar as CalendarIcon, Edit, ExternalLink, LayoutGrid, List, Plus, Trash2, Video } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -81,13 +81,25 @@ export default function CalendarPage() {
   const queryClient = useQueryClient();
   const { data: events, isLoading } = useListCalendarEvents({});
   const { data: users } = useListUsers();
+  const { data: tickets } = useListTickets({});
+  const { data: projects } = useListProjects({});
   const [dialogOpen, setDialogOpen] = React.useState(false);
   const [form, setForm] = React.useState<CalendarForm>(emptyForm);
   const [view, setView] = React.useState<"calendar" | "table">("calendar");
   const [saving, setSaving] = React.useState(false);
   const today = new Date();
-  const startDate = startOfWeek(today, { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
+  const monthStart = startOfMonth(today);
+  const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
+  const gridEnd = endOfWeek(endOfMonth(today), { weekStartsOn: 1 });
+  const calendarDays: Date[] = [];
+  for (let day = gridStart; day <= gridEnd; day = addDays(day, 1)) {
+    calendarDays.push(day);
+  }
+  const relatedOptions = form.entityType === "project"
+    ? (projects || []).map((project: any) => ({ id: project.id, reference: project.projectNo, title: project.title }))
+    : form.entityType === "ticket"
+      ? (tickets || []).map((ticket: any) => ({ id: ticket.id, reference: ticket.ticketNo, title: ticket.subject }))
+      : [];
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: getListCalendarEventsQueryKey({}) });
 
@@ -180,17 +192,6 @@ export default function CalendarPage() {
         </div>
 
         <Card className="overflow-hidden">
-          {view === "calendar" && <div className="grid grid-cols-7 border-b bg-slate-50/50">
-            {weekDays.map((date, i) => {
-              const isToday = format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd");
-              return (
-                <div key={i} className={`border-r p-3 text-center last:border-r-0 ${isToday ? "bg-primary/5" : ""}`}>
-                  <div className={`mb-1 text-xs font-semibold uppercase ${isToday ? "text-primary" : "text-muted-foreground"}`}>{format(date, "EEE")}</div>
-                  <div className={`mx-auto flex h-8 w-8 items-center justify-center rounded-full text-lg font-bold ${isToday ? "bg-primary text-primary-foreground" : "text-foreground"}`}>{format(date, "d")}</div>
-                </div>
-              );
-            })}
-          </div>}
           <CardContent className="p-4">
             {isLoading ? (
               <div className="p-8 text-center text-muted-foreground">Loading calendar...</div>
@@ -198,6 +199,37 @@ export default function CalendarPage() {
               <div className="flex min-h-[320px] flex-col items-center justify-center text-center text-muted-foreground">
                 <CalendarIcon className="mb-4 h-12 w-12 opacity-20" />
                 <p>No reminders or meetings created.</p>
+              </div>
+            ) : view === "calendar" ? (
+              <div className="overflow-auto rounded-md border bg-white">
+                <div className="grid min-w-[980px] grid-cols-7 border-b bg-slate-50 text-center text-xs font-semibold uppercase text-muted-foreground">
+                  {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map(day => <div key={day} className="border-r p-2 last:border-r-0">{day}</div>)}
+                </div>
+                <div className="grid min-w-[980px] grid-cols-7">
+                  {calendarDays.map((date) => {
+                    const dayEvents = (events || []).filter(event => isSameDay(new Date(event.startDate), date));
+                    const todayCell = isSameDay(date, today);
+                    return (
+                      <div key={date.toISOString()} className={`min-h-[132px] border-b border-r p-2 last:border-r-0 ${isSameMonth(date, today) ? "bg-white" : "bg-slate-50/60"} ${todayCell ? "ring-1 ring-inset ring-primary" : ""}`}>
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className={`flex h-7 w-7 items-center justify-center rounded-full text-sm font-semibold ${todayCell ? "bg-primary text-primary-foreground" : "text-foreground"}`}>
+                            {format(date, "d")}
+                          </span>
+                          {dayEvents.length > 0 && <span className="text-[11px] text-muted-foreground">{dayEvents.length}</span>}
+                        </div>
+                        <div className="space-y-1">
+                          {dayEvents.slice(0, 3).map(event => (
+                            <button key={event.id} onClick={() => openEdit(event)} className="w-full rounded border-l-2 border-l-primary bg-primary/5 px-2 py-1 text-left text-[11px] hover:bg-primary/10">
+                              <div className="truncate font-semibold">{event.title}</div>
+                              <div className="truncate text-muted-foreground">{format(new Date(event.startDate), "h:mm a")} - {event.type}</div>
+                            </button>
+                          ))}
+                          {dayEvents.length > 3 && <div className="text-[11px] text-muted-foreground">+{dayEvents.length - 3} more</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             ) : view === "table" ? (
               <div className="overflow-x-auto">
@@ -222,7 +254,7 @@ export default function CalendarPage() {
                         <td className="px-3 py-2 capitalize">{event.entityType || "-"} {event.entityId || ""}</td>
                         <td className="px-3 py-2">
                           <div className="flex justify-end gap-1">
-                            <a href={googleCalendarUrl(event)} target="_blank" rel="noreferrer"><Button variant="ghost" size="icon" className="h-8 w-8"><ExternalLink className="h-4 w-4" /></Button></a>
+                            <a href={googleCalendarUrl(event)} target="_blank" rel="noreferrer"><Button variant="ghost" size="icon" className="h-8 w-8" title="Sync to Google Calendar"><ExternalLink className="h-4 w-4" /></Button></a>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(event)}><Edit className="h-4 w-4" /></Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(event.id)}><Trash2 className="h-4 w-4 text-rose-500" /></Button>
                           </div>
@@ -258,7 +290,7 @@ export default function CalendarPage() {
                           </a>
                         )}
                         <a href={googleCalendarUrl(event)} target="_blank" rel="noreferrer">
-                          <Button variant="outline" size="sm" className="gap-2"><ExternalLink className="h-4 w-4" /> Google</Button>
+                          <Button variant="outline" size="sm" className="gap-2"><ExternalLink className="h-4 w-4" /> Sync Google</Button>
                         </a>
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(event)}>
                           <Edit className="h-4 w-4" />
@@ -310,7 +342,7 @@ export default function CalendarPage() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Related Module</Label>
-                  <Select value={form.entityType} onValueChange={(value) => setForm(current => ({ ...current, entityType: value }))}>
+                  <Select value={form.entityType} onValueChange={(value) => setForm(current => ({ ...current, entityType: value, entityId: "" }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ticket">Ticket</SelectItem>
@@ -320,8 +352,33 @@ export default function CalendarPage() {
                   </Select>
                 </div>
                 <div className="space-y-1.5">
-                  <Label>Related ID</Label>
-                  <Input value={form.entityId} onChange={(event) => setForm(current => ({ ...current, entityId: event.target.value }))} placeholder="Ticket or project ID" />
+                  <Label>{form.entityType === "project" ? "Project" : form.entityType === "ticket" ? "Ticket" : "Related ID"}</Label>
+                  {form.entityType === "ticket" || form.entityType === "project" ? (
+                    <Select
+                      value={form.entityId || "none"}
+                      onValueChange={(value) => {
+                        const selected = relatedOptions.find(option => String(option.id) === value);
+                        setForm(current => ({
+                          ...current,
+                          entityId: value === "none" ? "" : value,
+                          title: current.title || (selected ? `Reminder: ${selected.reference}` : current.title),
+                          description: current.description || selected?.title || current.description,
+                        }));
+                      }}
+                    >
+                      <SelectTrigger><SelectValue placeholder={`Select ${form.entityType}`} /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No {form.entityType}</SelectItem>
+                        {relatedOptions.map(option => (
+                          <SelectItem key={option.id} value={String(option.id)}>
+                            {option.reference} - {option.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input value={form.entityId} onChange={(event) => setForm(current => ({ ...current, entityId: event.target.value }))} placeholder="Related record ID" />
+                  )}
                 </div>
               </div>
               <div className="space-y-1.5">

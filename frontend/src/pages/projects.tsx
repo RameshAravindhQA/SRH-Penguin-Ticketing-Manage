@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, Plus, FolderKanban, LayoutGrid, List, PlayCircle, CheckCircle2, PauseCircle } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { ProjectCard } from "@/components/projects/ProjectCard";
-import { TableControls, usePagination } from "@/components/shared/TableControls";
+import { ExportMenu, TableControls, usePagination } from "@/components/shared/TableControls";
 import { ModuleStats } from "@/components/shared/ModuleStats";
 import { RowActions } from "@/components/shared/RowActions";
 import { AuditLogDialog } from "@/components/shared/AuditLogDialog";
@@ -139,6 +139,7 @@ export default function ProjectsPage() {
             <p className="text-muted-foreground text-sm">Track enterprise projects and their progress.</p>
           </div>
           <div className="flex items-center gap-2">
+            <ExportMenu exportData={exportData} exportHeaders={exportHeaders} exportKeys={exportKeys} exportFilename="projects" exportTitle="Projects Report" />
             <div className="flex border rounded-md overflow-hidden">
               <Button variant={view === "table" ? "secondary" : "ghost"} size="sm" className="rounded-none h-8 px-3 gap-1" onClick={() => setView("table")}><List className="w-4 h-4" /></Button>
               <Button variant={view === "grid" ? "secondary" : "ghost"} size="sm" className="rounded-none h-8 px-3 gap-1" onClick={() => setView("grid")}><LayoutGrid className="w-4 h-4" /></Button>
@@ -151,7 +152,7 @@ export default function ProjectsPage() {
 
         <ModuleStats
           stats={[
-            { label: "Total Projects", value: counts.all, icon: FolderKanban, tone: "sky", active: statusFilter === "all", onClick: () => { setStatusFilter("all"); setPage(1); } },
+            { label: "Total Projects", value: counts.all, icon: FolderKanban, tone: "sky", active: statusFilter === "all" && priorityFilter === "all", onClick: () => { setStatusFilter("all"); setPriorityFilter("all"); setPage(1); } },
             { label: "In Progress", value: counts.inProgress, icon: PlayCircle, tone: "violet", active: statusFilter === "in_progress", onClick: () => { setStatusFilter("in_progress"); setPage(1); } },
             { label: "Completed", value: counts.completed, icon: CheckCircle2, tone: "emerald", active: statusFilter === "completed", onClick: () => { setStatusFilter("completed"); setPage(1); } },
             { label: "On Hold", value: counts.onHold, icon: PauseCircle, tone: "amber", active: statusFilter === "on_hold", onClick: () => { setStatusFilter("on_hold"); setPage(1); } },

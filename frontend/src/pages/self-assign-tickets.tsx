@@ -4,7 +4,7 @@ import { ModuleStats } from "@/components/shared/ModuleStats";
 import { AuditLogDialog } from "@/components/shared/AuditLogDialog";
 import { ReminderDialog } from "@/components/shared/ReminderDialog";
 import { RowActions } from "@/components/shared/RowActions";
-import { TableControls, usePagination } from "@/components/shared/TableControls";
+import { ExportMenu, TableControls, usePagination } from "@/components/shared/TableControls";
 import { TicketEditDialog, TicketEditValues } from "@/components/tickets/TicketEditDialog";
 import { TicketActionDialog } from "@/components/tickets/TicketActionDialogs";
 import { AttachmentPicker } from "@/components/tickets/TicketAttachments";
@@ -307,6 +307,20 @@ export default function SelfAssignTicketsPage() {
         categoryId: values.categoryId ? Number(values.categoryId) : undefined,
         subCategoryId: values.subCategoryId ? Number(values.subCategoryId) : undefined,
         dueDate: values.dueDate || undefined,
+        expectedCloseDate: values.expectedCloseDate || undefined,
+        sourceDepartment: values.sourceDepartment || undefined,
+        serviceType: values.serviceType || undefined,
+        location: values.location || undefined,
+        systemType: values.systemType || undefined,
+        systemSubType: values.systemSubType || undefined,
+        reviewSchedule: values.reviewSchedule ? Number(values.reviewSchedule) : undefined,
+        reviewDuration: values.reviewDuration || undefined,
+        isExternal: values.isExternal === "true",
+        organizationName: values.organizationName || undefined,
+        providerName: values.providerName || undefined,
+        externalPersonRole: values.externalPersonRole || undefined,
+        externalPhoneNo: values.externalPhoneNo || undefined,
+        supportingPerson: values.supportingPerson || undefined,
       } as any,
     }, {
       onSuccess: () => {
@@ -342,9 +356,12 @@ export default function SelfAssignTicketsPage() {
             <h2 className="text-xl font-bold tracking-tight text-foreground">Self Assign Tickets</h2>
             <p className="text-sm text-muted-foreground">Create, own, update, and close tickets assigned directly to yourself.</p>
           </div>
-          <Button size="sm" className="gap-2" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> New Self Ticket
-          </Button>
+          <div className="flex items-center gap-2">
+            <ExportMenu exportData={exportData} exportHeaders={exportHeaders} exportKeys={exportHeaders} exportFilename="self-assign-tickets" exportTitle="Self Assign Tickets" />
+            <Button size="sm" className="gap-2" onClick={openCreate}>
+              <Plus className="h-4 w-4" /> New Self Ticket
+            </Button>
+          </div>
         </div>
 
         <ModuleStats

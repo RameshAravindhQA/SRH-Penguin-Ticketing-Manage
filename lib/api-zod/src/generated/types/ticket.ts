@@ -29,15 +29,65 @@ export interface Ticket {
   /** @nullable */
   assignedToAvatar?: string | null;
   /** @nullable */
+  assignedDepartmentId?: number | null;
+  /** @nullable */
+  assignedDepartmentName?: string | null;
+  /** @nullable */
+  sourceDepartment?: string | null;
+  /** @nullable */
   projectId?: number | null;
   /** @nullable */
   projectName?: string | null;
   /** @nullable */
+  systemType?: string | null;
+  /** @nullable */
+  systemSubType?: string | null;
+  /** @nullable */
+  systemTypeNo?: string | null;
+  /** @nullable */
+  serviceType?: string | null;
+  /** @nullable */
+  institute?: string | null;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  assignedAt?: string | null;
+  /** @nullable */
+  startedAt?: string | null;
+  /** @nullable */
   dueDate?: string | null;
+  /** @nullable */
+  expectedCloseDate?: string | null;
   /** @nullable */
   resolvedAt?: string | null;
   /** @nullable */
   closedAt?: string | null;
+  /** @nullable */
+  verifiedAt?: string | null;
+  /** @nullable */
+  verificationRemarks?: string | null;
+  reopenCount?: number;
+  /** @nullable */
+  reopenedAt?: string | null;
+  /** @nullable */
+  reopenRemarks?: string | null;
+  /** @nullable */
+  reviewSchedule?: number | null;
+  /** @nullable */
+  reviewDays?: string | null;
+  /** @nullable */
+  reviewDuration?: string | null;
+  isExternal?: boolean;
+  /** @nullable */
+  organizationName?: string | null;
+  /** @nullable */
+  providerName?: string | null;
+  /** @nullable */
+  externalPersonRole?: string | null;
+  /** @nullable */
+  externalPhoneNo?: string | null;
+  /** @nullable */
+  supportingPerson?: string | null;
   /** @nullable */
   pendingDays?: number | null;
   slaBreached?: boolean;

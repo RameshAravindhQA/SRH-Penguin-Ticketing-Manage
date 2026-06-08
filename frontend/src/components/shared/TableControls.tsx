@@ -74,7 +74,7 @@ export function TableControls({
   exportKeys,
   exportFilename = "export",
   exportTitle = "Export",
-  showExport = true,
+  showExport = false,
 }: TableControlsProps) {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;

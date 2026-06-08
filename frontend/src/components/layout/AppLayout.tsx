@@ -16,10 +16,12 @@ export function AppLayout({ children, title = "Dashboard" }: AppLayoutProps) {
   let pageTitle = title;
   if (!title) {
     if (location.startsWith("/tickets/new")) pageTitle = "Raise Ticket";
+    else if (location.startsWith("/monitor-board")) pageTitle = "Monitor Board";
     else if (location.startsWith("/tickets")) pageTitle = "My Tickets";
     else if (location.startsWith("/projects")) pageTitle = "Projects";
     else if (location.startsWith("/worklist")) pageTitle = "Common Worklist";
     else if (location.startsWith("/todos")) pageTitle = "To-Do Management";
+    else if (location.startsWith("/reminders")) pageTitle = "Reminders";
     else if (location.startsWith("/calendar")) pageTitle = "Calendar";
     else if (location.startsWith("/timesheets")) pageTitle = "Timesheets";
     else if (location.startsWith("/users")) pageTitle = "Users";
@@ -33,8 +35,8 @@ export function AppLayout({ children, title = "Dashboard" }: AppLayoutProps) {
       <Sidebar collapsed={collapsed} />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header title={pageTitle} onMenuClick={() => setCollapsed(!collapsed)} />
-        <main className="flex-1 overflow-auto bg-slate-50 relative">
-          <div className="absolute inset-0 p-4 md:p-6">
+        <main className="flex-1 min-h-0 overflow-hidden bg-slate-50">
+          <div className="h-full overflow-y-auto overflow-x-hidden p-4 md:p-6">
             {children}
           </div>
         </main>

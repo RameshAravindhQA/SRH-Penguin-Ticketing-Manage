@@ -7,6 +7,9 @@ export const categoriesTable = pgTable("categories", {
   name: text("name").notNull(),
   type: text("type").notNull().default("ticket"),
   description: text("description"),
+  status: text("status").notNull().default("active"),
+  orderBy: integer("order_by"),
+  legacyCategoryType: integer("legacy_category_type"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
@@ -16,6 +19,9 @@ export const ticketTypesTable = pgTable("ticket_types", {
   name: text("name").notNull(),
   code: text("code").notNull().unique(),
   description: text("description"),
+  status: text("status").notNull().default("active"),
+  orderBy: integer("order_by"),
+  legacyType: integer("legacy_type"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });

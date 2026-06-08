@@ -76,7 +76,7 @@ router.get("/projects", authMiddleware, async (req, res): Promise<void> => {
 
 router.post("/projects", authMiddleware, async (req, res): Promise<void> => {
   const authUser = (req as any).user;
-  const { title, description, priority, category, subCategoryId, type, ownerId, processOwnerId, startDate, endDate, reviewFrequency } = req.body;
+  const { title, description, priority, category, subCategoryId, type, ownerId, processOwnerId, startDate, endDate, reviewFrequency, sourceDepartment, serviceType, location, systemType, systemSubType, reviewSchedule, reviewDuration, organizationName, providerName, externalPersonRole, externalPhoneNo, supportingPerson } = req.body;
   if (!title || !priority) { res.status(400).json({ error: "Title and priority required" }); return; }
   const projectNo = await getNextProjectNo();
   const [project] = await db.insert(projectsTable).values({
@@ -91,6 +91,18 @@ router.post("/projects", authMiddleware, async (req, res): Promise<void> => {
     startDate: startDate ?? null,
     endDate: endDate ?? null,
     reviewFrequency: reviewFrequency ?? null,
+    sourceDepartment: sourceDepartment ?? null,
+    serviceType: serviceType ?? null,
+    location: location ?? null,
+    systemType: systemType ?? null,
+    systemSubType: systemSubType ?? null,
+    reviewSchedule: reviewSchedule != null && reviewSchedule !== "" ? Number(reviewSchedule) : null,
+    reviewDuration: reviewDuration ?? null,
+    organizationName: organizationName ?? null,
+    providerName: providerName ?? null,
+    externalPersonRole: externalPersonRole ?? null,
+    externalPhoneNo: externalPhoneNo ?? null,
+    supportingPerson: supportingPerson ?? null,
   }).returning();
   await createAuditLog({ action: "create", entityType: "project", entityId: project.id, entityRef: project.projectNo, userId: authUser.userId, newValue: { title } });
   res.status(201).json(await enrichProject(project));
@@ -105,7 +117,7 @@ router.get("/projects/:id", authMiddleware, async (req, res): Promise<void> => {
 
 router.patch("/projects/:id", authMiddleware, async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  const { title, description, status, priority, subCategoryId, ownerId, processOwnerId, startDate, endDate } = req.body;
+  const { title, description, status, priority, subCategoryId, ownerId, processOwnerId, startDate, endDate, sourceDepartment, serviceType, location, systemType, systemSubType, reviewSchedule, reviewDuration, organizationName, providerName, externalPersonRole, externalPhoneNo, supportingPerson } = req.body;
   const [project] = await db.update(projectsTable).set({
     ...(title ? { title } : {}),
     ...(description != null ? { description } : {}),
@@ -116,6 +128,18 @@ router.patch("/projects/:id", authMiddleware, async (req, res): Promise<void> =>
     ...(processOwnerId != null ? { processOwnerId } : {}),
     ...(startDate != null ? { startDate } : {}),
     ...(endDate != null ? { endDate } : {}),
+    ...(sourceDepartment !== undefined ? { sourceDepartment } : {}),
+    ...(serviceType !== undefined ? { serviceType } : {}),
+    ...(location !== undefined ? { location } : {}),
+    ...(systemType !== undefined ? { systemType } : {}),
+    ...(systemSubType !== undefined ? { systemSubType } : {}),
+    ...(reviewSchedule !== undefined ? { reviewSchedule: reviewSchedule ? Number(reviewSchedule) : null } : {}),
+    ...(reviewDuration !== undefined ? { reviewDuration } : {}),
+    ...(organizationName !== undefined ? { organizationName } : {}),
+    ...(providerName !== undefined ? { providerName } : {}),
+    ...(externalPersonRole !== undefined ? { externalPersonRole } : {}),
+    ...(externalPhoneNo !== undefined ? { externalPhoneNo } : {}),
+    ...(supportingPerson !== undefined ? { supportingPerson } : {}),
   }).where(eq(projectsTable.id, id)).returning();
   if (!project) { res.status(404).json({ error: "Project not found" }); return; }
   const authUser = (req as any).user;

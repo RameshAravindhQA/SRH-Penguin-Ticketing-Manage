@@ -91,7 +91,7 @@ router.get("/users/tree", authMiddleware, async (req, res): Promise<void> => {
 });
 
 router.post("/users", authMiddleware, async (req, res): Promise<void> => {
-  const { employeeCode, name, email, mobile, departmentId, designation, role, roleId, reportingManagerId, password, status } = req.body;
+  const { employeeCode, name, email, mobile, departmentId, designation, role, roleId, reportingManagerId, password, status, avatarUrl } = req.body;
   if (!employeeCode || !name || !email || !role) {
     res.status(400).json({ error: "Missing required fields" });
     return;
@@ -108,6 +108,7 @@ router.post("/users", authMiddleware, async (req, res): Promise<void> => {
     role,
     roleId: roleId ?? null,
     reportingManagerId: reportingManagerId ?? null,
+    avatarUrl: avatarUrl ?? null,
     status: status ?? "active",
   }).returning();
   const authUser = (req as any).user;
@@ -124,7 +125,7 @@ router.get("/users/:id", authMiddleware, async (req, res): Promise<void> => {
 
 router.patch("/users/:id", authMiddleware, async (req, res): Promise<void> => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  const { name, email, mobile, departmentId, designation, role, roleId, reportingManagerId, status } = req.body;
+  const { name, email, mobile, departmentId, designation, role, roleId, reportingManagerId, status, avatarUrl } = req.body;
   const [user] = await db.update(usersTable).set({
     ...(name != null ? { name } : {}),
     ...(email != null ? { email } : {}),
@@ -134,6 +135,7 @@ router.patch("/users/:id", authMiddleware, async (req, res): Promise<void> => {
     ...(role != null ? { role } : {}),
     ...(roleId != null ? { roleId } : {}),
     ...(reportingManagerId != null ? { reportingManagerId } : {}),
+    ...(avatarUrl !== undefined ? { avatarUrl: avatarUrl || null } : {}),
     ...(status != null ? { status } : {}),
   }).where(eq(usersTable.id, id)).returning();
   if (!user) { res.status(404).json({ error: "User not found" }); return; }

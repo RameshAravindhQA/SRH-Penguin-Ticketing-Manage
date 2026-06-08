@@ -15,6 +15,7 @@ tags:
   - name: roles
   - name: categories
   - name: tickets
+  - name: ticket-routines
   - name: worklist
   - name: projects
   - name: todos
@@ -673,6 +674,106 @@ paths:
                 $ref: "#/components/schemas/Comment"
 
   # ── WORKLIST ─────────────────────────────────────────────────────────────────
+  /tickets/{id}/assignments:
+    get:
+      operationId: listTicketAssignments
+      tags: [tickets]
+      summary: List ticket assignment history
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Assignment history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TicketAssignmentHistory"
+
+  /tickets/{id}/reopen:
+    post:
+      operationId: reopenTicket
+      tags: [tickets]
+      summary: Reopen ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketReopenInput"
+      responses:
+        "200":
+          description: Reopened
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /tickets/{id}/verify:
+    post:
+      operationId: verifyTicket
+      tags: [tickets]
+      summary: Verify and close or reject ticket
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketVerifyInput"
+      responses:
+        "200":
+          description: Verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ticket"
+
+  /ticket-routines:
+    get:
+      operationId: listTicketRoutines
+      tags: [ticket-routines]
+      summary: List routine tickets
+      responses:
+        "200":
+          description: Routine tickets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TicketRoutine"
+    post:
+      operationId: createTicketRoutine
+      tags: [ticket-routines]
+      summary: Create routine ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TicketRoutineInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TicketRoutine"
+
   /worklist:
     get:
       operationId: getWorklist
@@ -1260,6 +1361,7 @@ components:
         role: { type: string }
         roleId: { type: integer }
         reportingManagerId: { type: integer }
+        avatarUrl: { type: string }
         status: { type: string }
 
     # ── DEPARTMENT SCHEMAS ──────────────────────────────────────────────────
@@ -1340,11 +1442,37 @@ components:
         assignedToId: { type: ["integer", "null"] }
         assignedToName: { type: ["string", "null"] }
         assignedToAvatar: { type: ["string", "null"] }
+        assignedDepartmentId: { type: ["integer", "null"] }
+        assignedDepartmentName: { type: ["string", "null"] }
+        sourceDepartment: { type: ["string", "null"] }
         projectId: { type: ["integer", "null"] }
         projectName: { type: ["string", "null"] }
+        systemType: { type: ["string", "null"] }
+        systemSubType: { type: ["string", "null"] }
+        systemTypeNo: { type: ["string", "null"] }
+        serviceType: { type: ["string", "null"] }
+        institute: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        assignedAt: { type: ["string", "null"] }
+        startedAt: { type: ["string", "null"] }
         dueDate: { type: ["string", "null"] }
+        expectedCloseDate: { type: ["string", "null"] }
         resolvedAt: { type: ["string", "null"] }
         closedAt: { type: ["string", "null"] }
+        verifiedAt: { type: ["string", "null"] }
+        verificationRemarks: { type: ["string", "null"] }
+        reopenCount: { type: integer }
+        reopenedAt: { type: ["string", "null"] }
+        reopenRemarks: { type: ["string", "null"] }
+        reviewSchedule: { type: ["integer", "null"] }
+        reviewDays: { type: ["string", "null"] }
+        reviewDuration: { type: ["string", "null"] }
+        isExternal: { type: boolean }
+        organizationName: { type: ["string", "null"] }
+        providerName: { type: ["string", "null"] }
+        externalPersonRole: { type: ["string", "null"] }
+        externalPhoneNo: { type: ["string", "null"] }
+        supportingPerson: { type: ["string", "null"] }
         pendingDays: { type: ["integer", "null"] }
         slaBreached: { type: boolean }
         createdAt: { type: string }
@@ -1362,6 +1490,21 @@ components:
         assignedToId: { type: integer }
         projectId: { type: integer }
         dueDate: { type: string }
+        expectedCloseDate: { type: string }
+        sourceDepartment: { type: string }
+        serviceType: { type: string }
+        location: { type: string }
+        systemType: { type: string }
+        systemSubType: { type: string }
+        reviewSchedule: { type: integer }
+        reviewDays: { type: string }
+        reviewDuration: { type: string }
+        isExternal: { type: boolean }
+        organizationName: { type: string }
+        providerName: { type: string }
+        externalPersonRole: { type: string }
+        externalPhoneNo: { type: string }
+        supportingPerson: { type: string }
 
     TicketUpdate:
       type: object
@@ -1371,6 +1514,21 @@ components:
         priority: { type: string }
         categoryId: { type: integer }
         dueDate: { type: string }
+        expectedCloseDate: { type: string }
+        sourceDepartment: { type: string }
+        serviceType: { type: string }
+        location: { type: string }
+        systemType: { type: string }
+        systemSubType: { type: string }
+        reviewSchedule: { type: integer }
+        reviewDays: { type: string }
+        reviewDuration: { type: string }
+        isExternal: { type: boolean }
+        organizationName: { type: string }
+        providerName: { type: string }
+        externalPersonRole: { type: string }
+        externalPhoneNo: { type: string }
+        supportingPerson: { type: string }
 
     TicketStatusUpdate:
       type: object
@@ -1392,6 +1550,87 @@ components:
       properties:
         forwardToId: { type: integer }
         remarks: { type: string }
+
+    TicketAssignmentHistory:
+      type: object
+      required: [id, ticketId, assignedToId, assignedAt, status, reopenCount]
+      properties:
+        id: { type: integer }
+        ticketId: { type: integer }
+        assignedToId: { type: integer }
+        assignedToName: { type: ["string", "null"] }
+        assignedById: { type: ["integer", "null"] }
+        assignedByName: { type: ["string", "null"] }
+        assignedAt: { type: string }
+        startedAt: { type: ["string", "null"] }
+        endedAt: { type: ["string", "null"] }
+        status: { type: string }
+        remarks: { type: ["string", "null"] }
+        reopenCount: { type: integer }
+
+    TicketReopenInput:
+      type: object
+      required: [remarks]
+      properties:
+        remarks: { type: string }
+        assignedToId: { type: integer }
+
+    TicketVerifyInput:
+      type: object
+      required: [approved]
+      properties:
+        approved: { type: boolean }
+        remarks: { type: string }
+
+    TicketRoutine:
+      type: object
+      required: [id, routineNo, subject, status, priority, schedule, createdAt]
+      properties:
+        id: { type: integer }
+        routineNo: { type: string }
+        subject: { type: string }
+        description: { type: ["string", "null"] }
+        status: { type: string }
+        priority: { type: string }
+        categoryId: { type: ["integer", "null"] }
+        categoryName: { type: ["string", "null"] }
+        type: { type: string }
+        schedule: { type: string }
+        departmentId: { type: ["integer", "null"] }
+        departmentName: { type: ["string", "null"] }
+        raisedByName: { type: ["string", "null"] }
+        startDate: { type: ["string", "null"] }
+        closingDate: { type: ["string", "null"] }
+        assignToIds:
+          type: array
+          items: { type: integer }
+        assignCcIds:
+          type: array
+          items: { type: integer }
+        createdAt: { type: string }
+
+    TicketRoutineInput:
+      type: object
+      required: [subject, priority, schedule]
+      properties:
+        subject: { type: string }
+        description: { type: string }
+        priority: { type: string }
+        categoryId: { type: integer }
+        type: { type: string }
+        schedule: { type: string }
+        departmentId: { type: integer }
+        startDate: { type: string }
+        closingDate: { type: string }
+        assignToIds:
+          type: array
+          items: { type: integer }
+        assignCcIds:
+          type: array
+          items: { type: integer }
+        days:
+          type: array
+          items: { type: integer }
 
     Comment:
       type: object

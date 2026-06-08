@@ -6,6 +6,7 @@ import { toast } from "sonner";
 interface AuthContextType {
   token: string | null;
   user: User | null;
+  authChecked: boolean;
   setAuth: (token: string, user: User) => void;
   logout: () => void;
 }
@@ -18,6 +19,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem("auth_user");
     return saved ? JSON.parse(saved) : null;
   });
+  const [authChecked, setAuthChecked] = useState(false);
   const [_, setLocation] = useLocation();
 
   useEffect(() => {
@@ -36,6 +38,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function verifySavedToken() {
+      if (!token) {
+        setAuthChecked(true);
+        return;
+      }
+
+      try {
+        const baseUrl = (import.meta.env.VITE_API_BASE_URL || "http://localhost:6001").replace(/\/+$/, "");
+        const response = await fetch(`${baseUrl}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!response.ok) {
+          throw new Error("Saved session is invalid");
+        }
+
+        const currentUser = await response.json();
+        if (!cancelled) {
+          setUser(currentUser);
+          setAuthChecked(true);
+        }
+      } catch {
+        if (!cancelled) {
+          setToken(null);
+          setUser(null);
+          setAuthChecked(true);
+          setLocation("/login");
+          toast.error("Session expired. Please sign in again.");
+        }
+      }
+    }
+
+    verifySavedToken();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token, setLocation]);
+
   const setAuth = (newToken: string, newUser: User) => {
     setToken(newToken);
     setUser(newUser);
@@ -49,7 +93,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ token, user, setAuth, logout }}>
+    <AuthContext.Provider value={{ token, user, authChecked, setAuth, logout }}>
       {children}
     </AuthContext.Provider>
   );

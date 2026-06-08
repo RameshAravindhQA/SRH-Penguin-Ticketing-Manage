@@ -17,9 +17,10 @@ import { format } from "date-fns";
 import { Plus, Search, Calendar, MoreVertical, Trash2, ListTodo, Clock, CheckCircle2, Users, TicketPlus } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { TableControls, usePagination } from "@/components/shared/TableControls";
+import { ExportMenu, TableControls, usePagination } from "@/components/shared/TableControls";
 import { ModuleStats } from "@/components/shared/ModuleStats";
 import { RowActions } from "@/components/shared/RowActions";
+import { useConfirmation } from "@/components/shared/ConfirmationProvider";
 import { AuditLogDialog } from "@/components/shared/AuditLogDialog";
 
 function priorityBadge(p: string) {
@@ -89,6 +90,7 @@ function AddTodoDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v
 }
 
 export default function TodosPage() {
+  const confirm = useConfirmation();
   const [activeTab, setActiveTab] = useState("personal");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -129,7 +131,14 @@ export default function TodosPage() {
     });
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = async (id: number) => {
+    const confirmed = await confirm({
+      title: "Delete task?",
+      description: "This task will be permanently removed.",
+      confirmText: "Delete Task",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     deleteTodo.mutate({ id }, {
       onSuccess: () => { toast.success("Task deleted"); qc.invalidateQueries({ queryKey: getListTodosQueryKey({ type: activeTab }) }); },
       onError: () => toast.error("Failed to delete"),
@@ -196,17 +205,26 @@ export default function TodosPage() {
             <h2 className="text-xl font-bold tracking-tight text-foreground">Task Manager</h2>
             <p className="text-muted-foreground text-sm">Track personal and team action items.</p>
           </div>
-          <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}>
-            <Plus className="w-4 h-4" /> Add Task
-          </Button>
+          <div className="flex items-center gap-2">
+            <ExportMenu
+              exportData={exportData}
+              exportHeaders={["Title", "Status", "Priority", "Type", "Due Date", "Assigned To"]}
+              exportKeys={["Title", "Status", "Priority", "Type", "Due Date", "Assigned To"]}
+              exportFilename="todos"
+              exportTitle="Tasks Report"
+            />
+            <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)}>
+              <Plus className="w-4 h-4" /> Add Task
+            </Button>
+          </div>
         </div>
 
         <ModuleStats
           stats={[
-            { label: activeTab === "personal" ? "Personal Tasks" : "Team Tasks", value: counts.all, icon: activeTab === "personal" ? ListTodo : Users, tone: "sky", active: statusFilter === "all", onClick: () => { setStatusFilter("all"); setPage(1); } },
+            { label: activeTab === "personal" ? "Personal Tasks" : "Team Tasks", value: counts.all, icon: activeTab === "personal" ? ListTodo : Users, tone: "sky", active: statusFilter === "all" && priorityFilter === "all", onClick: () => { setStatusFilter("all"); setPriorityFilter("all"); setPage(1); } },
             { label: "Pending", value: counts.pending, icon: Clock, tone: "amber", active: statusFilter === "pending", onClick: () => { setStatusFilter("pending"); setPage(1); } },
             { label: "Completed", value: counts.completed, icon: CheckCircle2, tone: "emerald", active: statusFilter === "completed", onClick: () => { setStatusFilter("completed"); setPage(1); } },
-            { label: "High Priority", value: counts.high, icon: Calendar, tone: "rose", active: priorityFilter === "high", onClick: () => { setPriorityFilter("high"); setPage(1); } },
+            { label: "High Priority", value: counts.high, icon: Calendar, tone: "rose", active: priorityFilter === "high", onClick: () => { setStatusFilter("all"); setPriorityFilter("high"); setPage(1); } },
           ]}
         />
 

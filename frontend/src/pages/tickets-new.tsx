@@ -32,6 +32,7 @@ const ticketSchema = z.object({
   subCategoryId: z.coerce.number().optional(),
   assignedToId: z.coerce.number().optional(),
   dueDate: z.string().optional(),
+  expectedCloseDate: z.string().optional(),
 });
 
 export default function RaiseTicketPage() {
@@ -92,8 +93,9 @@ export default function RaiseTicketPage() {
   const exportHeaders = ["Ticket No", "Subject", "Type", "Status", "Priority", "Category", "Sub Category", "Assigned To", "Created Date", "Due Date"];
 
   const onSubmit = (values: z.infer<typeof ticketSchema>) => {
+    const payload = { ...values };
     createTicket.mutate(
-      { data: values as any },
+      { data: payload as any },
       {
         onSuccess: (data) => {
           const complete = () => {
@@ -303,6 +305,14 @@ export default function RaiseTicketPage() {
                   <FormField control={form.control} name="dueDate" render={({ field }) => (
                     <FormItem>
                       <FormLabel>Due Date</FormLabel>
+                      <FormControl><Input type="date" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+
+                  <FormField control={form.control} name="expectedCloseDate" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Expected Close Date</FormLabel>
                       <FormControl><Input type="date" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>

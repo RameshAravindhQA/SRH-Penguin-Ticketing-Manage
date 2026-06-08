@@ -28,6 +28,18 @@ const projectSchema = z.object({
   startDate: z.string().optional(),
   endDate: z.string().optional(),
   reviewFrequency: z.string().optional(),
+  sourceDepartment: z.string().optional(),
+  serviceType: z.string().optional(),
+  location: z.string().optional(),
+  systemType: z.string().optional(),
+  systemSubType: z.string().optional(),
+  reviewSchedule: z.string().optional(),
+  reviewDuration: z.string().optional(),
+  organizationName: z.string().optional(),
+  providerName: z.string().optional(),
+  externalPersonRole: z.string().optional(),
+  externalPhoneNo: z.string().optional(),
+  supportingPerson: z.string().optional(),
 });
 
 export default function CreateProjectPage() {
@@ -66,15 +78,18 @@ export default function CreateProjectPage() {
 
   return (
     <AppLayout title="Create Project">
-      <div className="max-w-3xl mx-auto py-6">
-        <Card>
+      <div className="mx-auto max-w-6xl py-4">
+        <Card className="overflow-hidden border-slate-200 bg-white">
           <CardHeader>
             <CardTitle>Initiate New Project</CardTitle>
-            <CardDescription>Setup a new enterprise project with timeline and ownership.</CardDescription>
+            <CardDescription>Setup project ownership, workflow classification, support details, and review plan.</CardDescription>
           </CardHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
-              <CardContent className="space-y-6">
+              <CardContent className="space-y-0 p-0">
+                <div className="grid grid-cols-1 border-t md:grid-cols-[220px_1fr]">
+                  <div className="bg-slate-50 px-4 py-3 text-sm font-semibold">Project Details</div>
+                  <div className="space-y-4 p-4">
                 <FormField
                   control={form.control}
                   name="title"
@@ -88,8 +103,12 @@ export default function CreateProjectPage() {
                     </FormItem>
                   )}
                 />
+                  </div>
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 border-t md:grid-cols-[220px_1fr]">
+                  <div className="bg-slate-50 px-4 py-3 text-sm font-semibold">Classification</div>
+                  <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="priority"
@@ -233,8 +252,53 @@ export default function CreateProjectPage() {
                       </FormItem>
                     )}
                   />
+                  </div>
                 </div>
 
+                <div className="grid grid-cols-1 border-t md:grid-cols-[220px_1fr]">
+                  <div className="bg-slate-50 px-4 py-3 text-sm font-semibold">Project Workflow Fields</div>
+                  <div className="grid grid-cols-1 gap-4 p-4 md:grid-cols-3">
+                    {[
+                      ["sourceDepartment", "From Department", "Requesting department"],
+                      ["serviceType", "Service Type", "Hardware, software, service request"],
+                      ["location", "Location", "Campus, block, room"],
+                      ["systemType", "System Type", "Project, task, ticket"],
+                      ["systemSubType", "System Sub Type", "Subtype"],
+                      ["reviewDuration", "Review Duration", "e.g. 30 days"],
+                      ["organizationName", "Organization", "External organization"],
+                      ["providerName", "Provider Name", "Contact person"],
+                      ["externalPersonRole", "Person Role", "Role"],
+                      ["externalPhoneNo", "Phone No", "Phone"],
+                      ["supportingPerson", "Supporting Person", "Internal support"],
+                    ].map(([name, label, placeholder]) => (
+                      <FormField key={name} control={form.control} name={name as any} render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>{label}</FormLabel>
+                          <FormControl><Input placeholder={placeholder} {...field} /></FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )} />
+                    ))}
+                    <FormField control={form.control} name="reviewSchedule" render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Review Schedule</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="None" /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            <SelectItem value="daily">Daily</SelectItem>
+                            <SelectItem value="weekly">Weekly</SelectItem>
+                            <SelectItem value="monthly">Monthly</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 border-t md:grid-cols-[220px_1fr]">
+                  <div className="bg-slate-50 px-4 py-3 text-sm font-semibold">Scope</div>
+                  <div className="p-4">
                 <FormField
                   control={form.control}
                   name="description"
@@ -252,6 +316,8 @@ export default function CreateProjectPage() {
                     </FormItem>
                   )}
                 />
+                  </div>
+                </div>
               </CardContent>
               <CardFooter className="flex justify-end gap-3 border-t pt-6">
                 <Button type="button" variant="outline" onClick={() => window.history.back()}>Cancel</Button>

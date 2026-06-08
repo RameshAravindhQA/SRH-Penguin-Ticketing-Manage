@@ -1,70 +1,20 @@
 import React, { useState, useMemo } from "react";
 import { AppLayout } from "@/components/layout/AppLayout";
-import { useListTimesheets, useCreateTimesheet, getListTimesheetsQueryKey } from "@workspace/api-client-react";
+import { useListTimesheets } from "@workspace/api-client-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format } from "date-fns";
-import { Clock, Plus, Search, CalendarDays, Timer, BarChart3 } from "lucide-react";
-import { useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { TableControls, usePagination } from "@/components/shared/TableControls";
+import { Clock, Search, CalendarDays, Timer, BarChart3 } from "lucide-react";
+import { ExportMenu, TableControls, usePagination } from "@/components/shared/TableControls";
 import { ModuleStats } from "@/components/shared/ModuleStats";
-
-function LogTimeDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
-  const createTimesheet = useCreateTimesheet();
-  const qc = useQueryClient();
-  const today = new Date().toISOString().split("T")[0];
-  const [form, setForm] = useState({ date: today, loginTime: "09:00", logoutTime: "18:00", hoursWorked: "8", taskDescription: "" });
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
-
-  const handleSubmit = () => {
-    if (!form.date || !form.hoursWorked) { toast.error("Date and hours are required"); return; }
-    createTimesheet.mutate({
-      data: { date: form.date, loginTime: form.loginTime, logoutTime: form.logoutTime, hoursWorked: Number(form.hoursWorked), taskDescription: form.taskDescription }
-    }, {
-      onSuccess: () => {
-        toast.success("Time entry logged");
-        qc.invalidateQueries({ queryKey: getListTimesheetsQueryKey() });
-        onOpenChange(false);
-        setForm({ date: today, loginTime: "09:00", logoutTime: "18:00", hoursWorked: "8", taskDescription: "" });
-      },
-      onError: () => toast.error("Failed to log time"),
-    });
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Log Time Entry</DialogTitle></DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="space-y-1.5"><Label>Date <span className="text-red-500">*</span></Label><Input type="date" value={form.date} onChange={set("date")} /></div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5"><Label>Login Time</Label><Input type="time" value={form.loginTime} onChange={set("loginTime")} /></div>
-            <div className="space-y-1.5"><Label>Logout Time</Label><Input type="time" value={form.logoutTime} onChange={set("logoutTime")} /></div>
-          </div>
-          <div className="space-y-1.5"><Label>Hours Worked <span className="text-red-500">*</span></Label><Input type="number" min="0.5" max="24" step="0.5" value={form.hoursWorked} onChange={set("hoursWorked")} /></div>
-          <div className="space-y-1.5"><Label>Task Description</Label><Textarea value={form.taskDescription} onChange={set("taskDescription")} placeholder="What did you work on?" className="min-h-[80px]" /></div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={createTimesheet.isPending}>{createTimesheet.isPending ? "Saving..." : "Log Time"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 export default function TimesheetsPage() {
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
   const [search, setSearch] = useState("");
-  const [logOpen, setLogOpen] = useState(false);
   const { data: timesheets, isLoading } = useListTimesheets({ fromDate: fromDate || undefined, toDate: toDate || undefined });
   const { page, pageSize, setPage, setPageSize, paginate } = usePagination(10);
 
@@ -90,11 +40,11 @@ export default function TimesheetsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold tracking-tight text-foreground">Time Tracking</h2>
-            <p className="text-muted-foreground text-sm">Log and review daily hours against tickets and projects.</p>
+            <p className="text-muted-foreground text-sm">Timesheet records are generated from self-assigned ticket work comments.</p>
           </div>
-          <Button size="sm" className="gap-2" onClick={() => setLogOpen(true)}>
-            <Plus className="w-4 h-4" /> Log Time
-          </Button>
+          <div className="flex items-center gap-2">
+            <ExportMenu exportData={exportData} exportHeaders={exportHeaders} exportKeys={exportKeys} exportFilename="timesheets" exportTitle="Timesheet Report" />
+          </div>
         </div>
 
         <ModuleStats
@@ -177,7 +127,6 @@ export default function TimesheetsPage() {
           />
         </Card>
       </div>
-      <LogTimeDialog open={logOpen} onOpenChange={setLogOpen} />
     </AppLayout>
   );
 }

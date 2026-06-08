@@ -11,11 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { UserPlus, MoreHorizontal, Search, Upload, Download, Trash2, FileSpreadsheet, Camera, Users, UserCheck, UserX, ShieldCheck, GitBranch, List } from "lucide-react";
+import { UserPlus, MoreHorizontal, Search, Upload, Download, Trash2, FileSpreadsheet, Camera, Users, UserCheck, UserX, ShieldCheck, GitBranch, List, Pencil } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { TableControls, usePagination } from "@/components/shared/TableControls";
+import { ExportMenu, TableControls, usePagination } from "@/components/shared/TableControls";
 import { ModuleStats } from "@/components/shared/ModuleStats";
+import { useConfirmation } from "@/components/shared/ConfirmationProvider";
 import { downloadCSVTemplate, parseCSVFile, exportToCSV, exportToExcel, exportToPDF } from "@/lib/export";
 
 async function localApiFetch(path: string) {
@@ -26,6 +27,38 @@ async function localApiFetch(path: string) {
   });
   if (!response.ok) throw new Error(await response.text());
   return response.json();
+}
+
+async function localApiJson(path: string, init: RequestInit) {
+  const token = localStorage.getItem("auth_token");
+  const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
+  const response = await fetch(`${baseUrl}${path}`, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init.headers,
+    },
+  });
+  if (!response.ok) throw new Error(await response.text());
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+function userFormDefaults(user?: any) {
+  return {
+    employeeCode: user?.employeeCode || "",
+    name: user?.name || "",
+    email: user?.email || "",
+    mobile: user?.mobile || "",
+    departmentId: user?.departmentId ? String(user.departmentId) : "",
+    designation: user?.designation || "",
+    role: user?.role || "employee",
+    roleId: user?.roleId ? String(user.roleId) : "",
+    password: "User@123",
+    status: user?.status || "active",
+    avatarUrl: user?.avatarUrl || "",
+  };
 }
 
 function EmployeeTree({ nodes }: { nodes: any[] }) {
@@ -73,15 +106,22 @@ function roleBadge(role: string) {
 }
 
 // ─── Add User Dialog ─────────────────────────────────────────────────────────
-function AddUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+function UserDialog({ open, onOpenChange, editingUser }: { open: boolean; onOpenChange: (v: boolean) => void; editingUser?: any }) {
   const createUser = useCreateUser();
   const { data: departments } = useListDepartments();
   const { data: roles } = useListRoles();
   const qc = useQueryClient();
   const avatarInputRef = useRef<HTMLInputElement>(null);
 
-  const [form, setForm] = useState({ employeeCode: "", name: "", email: "", mobile: "", departmentId: "", designation: "", role: "employee", roleId: "", password: "User@123", status: "active", avatarUrl: "" });
-  const [avatarPreview, setAvatarPreview] = useState("");
+  const [form, setForm] = useState(userFormDefaults(editingUser));
+  const [avatarPreview, setAvatarPreview] = useState(editingUser?.avatarUrl || "");
+  const [updating, setUpdating] = useState(false);
+
+  React.useEffect(() => {
+    if (!open) return;
+    setForm(userFormDefaults(editingUser));
+    setAvatarPreview(editingUser?.avatarUrl || "");
+  }, [open, editingUser]);
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
   const setS = (k: string) => (v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -103,19 +143,39 @@ function AddUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v
       toast.error("Employee code, name, email and role are required");
       return;
     }
+    const payload = {
+      ...form,
+      departmentId: form.departmentId ? Number(form.departmentId) : undefined,
+      roleId: form.roleId ? Number(form.roleId) : undefined,
+      avatarUrl: form.avatarUrl || undefined,
+    };
+    if (editingUser) {
+      setUpdating(true);
+      localApiJson(`/api/users/${editingUser.id}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+      })
+        .then(() => {
+          toast.success("Employee updated successfully");
+          qc.invalidateQueries({ queryKey: getListUsersQueryKey() });
+          qc.invalidateQueries({ queryKey: ["users-tree"] });
+          onOpenChange(false);
+        })
+        .catch(() => toast.error("Failed to update employee"))
+        .finally(() => setUpdating(false));
+      return;
+    }
     createUser.mutate({
       data: {
-        ...form,
-        departmentId: form.departmentId ? Number(form.departmentId) : undefined,
-        roleId: form.roleId ? Number(form.roleId) : undefined,
-        avatarUrl: form.avatarUrl || undefined,
+        ...payload,
       }
     }, {
       onSuccess: () => {
         toast.success("User created successfully");
         qc.invalidateQueries({ queryKey: getListUsersQueryKey() });
+        qc.invalidateQueries({ queryKey: ["users-tree"] });
         onOpenChange(false);
-        setForm({ employeeCode: "", name: "", email: "", mobile: "", departmentId: "", designation: "", role: "employee", roleId: "", password: "User@123", status: "active", avatarUrl: "" });
+        setForm(userFormDefaults());
         setAvatarPreview("");
       },
       onError: () => toast.error("Failed to create user"),
@@ -126,8 +186,8 @@ function AddUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New User</DialogTitle>
-          <DialogDescription>Create a new employee account with department and role assignment.</DialogDescription>
+          <DialogTitle>{editingUser ? "Edit Employee" : "Add New Employee"}</DialogTitle>
+          <DialogDescription>{editingUser ? "Update employee profile, photo, role, and department assignment." : "Create a new employee account with department and role assignment."}</DialogDescription>
         </DialogHeader>
         <div className="grid grid-cols-1 gap-5 py-2">
           {/* Avatar Upload */}
@@ -149,7 +209,7 @@ function AddUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5"><Label>Employee Code <span className="text-red-500">*</span></Label><Input value={form.employeeCode} onChange={set("employeeCode")} placeholder="EMP-007" /></div>
+            <div className="space-y-1.5"><Label>Employee Code <span className="text-red-500">*</span></Label><Input value={form.employeeCode} onChange={set("employeeCode")} placeholder="EMP-007" disabled={!!editingUser} /></div>
             <div className="space-y-1.5"><Label>Full Name <span className="text-red-500">*</span></Label><Input value={form.name} onChange={set("name")} placeholder="John Smith" /></div>
             <div className="space-y-1.5"><Label>Email <span className="text-red-500">*</span></Label><Input type="email" value={form.email} onChange={set("email")} placeholder="john@company.com" /></div>
             <div className="space-y-1.5"><Label>Mobile</Label><Input value={form.mobile} onChange={set("mobile")} placeholder="+91 9000000000" /></div>
@@ -195,7 +255,7 @@ function AddUserDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={createUser.isPending}>{createUser.isPending ? "Creating..." : "Create User"}</Button>
+          <Button onClick={handleSubmit} disabled={createUser.isPending || updating}>{createUser.isPending || updating ? "Saving..." : editingUser ? "Save Employee" : "Create Employee"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -277,6 +337,7 @@ function ImportDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v:
 
 // ─── Main Page ───────────────────────────────────────────────────────────────
 export default function UsersPage() {
+  const confirm = useConfirmation();
   const { data: users, isLoading } = useListUsers();
   const { data: treeData, isLoading: treeLoading } = useQuery({ queryKey: ["users-tree"], queryFn: () => localApiFetch("/api/users/tree") });
   const deleteUser = useDeleteUser();
@@ -287,6 +348,7 @@ export default function UsersPage() {
   const [deptFilter, setDeptFilter] = useState("all");
   const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
   const [view, setView] = useState<"table" | "tree">("table");
   const { data: departments } = useListDepartments();
   const { page, pageSize, setPage, setPageSize, paginate } = usePagination(10);
@@ -294,7 +356,8 @@ export default function UsersPage() {
   const filtered = useMemo(() => {
     return (users || []).filter(u => {
       if (statusFilter !== "all" && u.status?.toLowerCase() !== statusFilter) return false;
-      if (roleFilter !== "all" && u.role !== roleFilter) return false;
+      if (roleFilter === "admin_manager" && u.role !== "admin" && u.role !== "manager") return false;
+      if (roleFilter !== "all" && roleFilter !== "admin_manager" && u.role !== roleFilter) return false;
       if (deptFilter !== "all" && String(u.departmentId) !== deptFilter) return false;
       if (search) {
         const s = search.toLowerCase();
@@ -320,12 +383,28 @@ export default function UsersPage() {
   const exportHeaders = ["Code", "Name", "Email", "Mobile", "Department", "Designation", "Role", "Status"];
   const exportKeys = exportHeaders;
 
-  const handleDelete = (id: number, name: string) => {
-    if (!confirm(`Delete user "${name}"? This cannot be undone.`)) return;
+  const handleDelete = async (id: number, name: string) => {
+    const confirmed = await confirm({
+      title: "Delete user?",
+      description: `Delete user "${name}"? This cannot be undone.`,
+      confirmText: "Delete User",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
     deleteUser.mutate({ id }, {
       onSuccess: () => { toast.success("User deleted"); qc.invalidateQueries({ queryKey: getListUsersQueryKey() }); },
       onError: () => toast.error("Failed to delete user"),
     });
+  };
+
+  const openCreate = () => {
+    setEditingUser(null);
+    setAddOpen(true);
+  };
+
+  const openEdit = (user: any) => {
+    setEditingUser(user);
+    setAddOpen(true);
   };
 
   return (
@@ -338,6 +417,13 @@ export default function UsersPage() {
             <p className="text-muted-foreground text-sm">Manage employee accounts, roles, and department assignments.</p>
           </div>
           <div className="flex items-center gap-2">
+            <ExportMenu
+              exportData={exportData}
+              exportHeaders={exportHeaders}
+              exportKeys={exportKeys}
+              exportFilename="users"
+              exportTitle="User Directory"
+            />
             <div className="flex overflow-hidden rounded-md border bg-white">
               <Button variant={view === "table" ? "secondary" : "ghost"} size="sm" className="rounded-none gap-2" onClick={() => setView("table")}>
                 <List className="h-4 w-4" /> Table
@@ -349,7 +435,7 @@ export default function UsersPage() {
             <Button variant="outline" size="sm" className="gap-2" onClick={() => setImportOpen(true)}>
               <Upload className="w-4 h-4" /> Import
             </Button>
-            <Button size="sm" className="gap-2" onClick={() => setAddOpen(true)} data-testid="button-add-user">
+            <Button size="sm" className="gap-2" onClick={openCreate} data-testid="button-add-user">
               <UserPlus className="w-4 h-4" /> Add User
             </Button>
           </div>
@@ -360,7 +446,7 @@ export default function UsersPage() {
             { label: "Total Users", value: counts.all, icon: Users, tone: "sky", active: statusFilter === "all" && roleFilter === "all", onClick: () => { setStatusFilter("all"); setRoleFilter("all"); setPage(1); } },
             { label: "Active", value: counts.active, icon: UserCheck, tone: "emerald", active: statusFilter === "active", onClick: () => { setStatusFilter("active"); setPage(1); } },
             { label: "Inactive", value: counts.inactive, icon: UserX, tone: "slate", active: statusFilter === "inactive", onClick: () => { setStatusFilter("inactive"); setPage(1); } },
-            { label: "Admin / Manager", value: counts.admins, icon: ShieldCheck, tone: "violet" },
+            { label: "Admin / Manager", value: counts.admins, icon: ShieldCheck, tone: "violet", active: roleFilter === "admin_manager", onClick: () => { setRoleFilter("admin_manager"); setStatusFilter("all"); setPage(1); } },
           ]}
         />
 
@@ -464,6 +550,9 @@ export default function UsersPage() {
                             <Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="w-4 h-4" /></Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
+                            <DropdownMenuItem className="gap-2" onClick={() => openEdit(user)}>
+                              <Pencil className="w-4 h-4" /> Edit
+                            </DropdownMenuItem>
                             <DropdownMenuItem className="text-red-600 gap-2" onClick={() => handleDelete(user.id, user.name)}>
                               <Trash2 className="w-4 h-4" /> Delete
                             </DropdownMenuItem>
@@ -484,7 +573,7 @@ export default function UsersPage() {
         </Card>
         )}
 
-        <AddUserDialog open={addOpen} onOpenChange={setAddOpen} />
+        <UserDialog open={addOpen} onOpenChange={setAddOpen} editingUser={editingUser} />
         <ImportDialog open={importOpen} onOpenChange={setImportOpen} />
       </div>
     </AppLayout>

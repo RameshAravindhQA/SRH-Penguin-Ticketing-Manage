@@ -13,8 +13,12 @@ import { BellRing, Clock, Download, User, Briefcase, Calendar, MessageSquare } f
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { exportToExcel, exportToPDF } from "@/lib/export";
+import { listTicketAssignments, reopenTicket, verifyTicket } from "@/lib/ticket-workflow";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
 export default function TicketDetailPage() {
   const params = useParams();
@@ -22,6 +26,9 @@ export default function TicketDetailPage() {
   const queryClient = useQueryClient();
   const [commentText, setCommentText] = React.useState("");
   const [reminderOpen, setReminderOpen] = React.useState(false);
+  const [workflowDialog, setWorkflowDialog] = React.useState<"reopen" | "verify" | "reject" | null>(null);
+  const [workflowRemarks, setWorkflowRemarks] = React.useState("");
+  const [workflowSaving, setWorkflowSaving] = React.useState(false);
   const addComment = useAddTicketComment();
   const updateStatus = useUpdateTicketStatus();
 
@@ -30,10 +37,16 @@ export default function TicketDetailPage() {
   });
 
   const { data: comments } = useListTicketComments(id);
+  const { data: assignments } = useQuery({
+    queryKey: ["ticket-assignments", id],
+    queryFn: () => listTicketAssignments(id),
+    enabled: !!id,
+  });
 
   const refreshTicket = () => {
     queryClient.invalidateQueries({ queryKey: getGetTicketQueryKey(id) });
     queryClient.invalidateQueries({ queryKey: getListTicketCommentsQueryKey(id) });
+    queryClient.invalidateQueries({ queryKey: ["ticket-assignments", id] });
   };
 
   const handleAddComment = () => {
@@ -80,6 +93,31 @@ export default function TicketDetailPage() {
     exportToExcel(data, `${ticket.ticketNo}-details`, "Ticket Details");
     exportToPDF(data, Object.keys(data[0]), Object.keys(data[0]), `${ticket.ticketNo}-details`, `Ticket Details - ${ticket.ticketNo}`);
     toast.success("Ticket details exported");
+  };
+
+  const handleWorkflowSave = async () => {
+    if (!workflowDialog) return;
+    if ((workflowDialog === "reopen" || workflowDialog === "reject") && !workflowRemarks.trim()) {
+      toast.error("Remarks are required");
+      return;
+    }
+    setWorkflowSaving(true);
+    try {
+      if (workflowDialog === "reopen") {
+        await reopenTicket(id, { remarks: workflowRemarks.trim() });
+        toast.success("Ticket reopened");
+      } else {
+        await verifyTicket(id, { approved: workflowDialog === "verify", remarks: workflowRemarks.trim() || undefined });
+        toast.success(workflowDialog === "verify" ? "Ticket verified and closed" : "Ticket rejected and reopened");
+      }
+      setWorkflowDialog(null);
+      setWorkflowRemarks("");
+      refreshTicket();
+    } catch {
+      toast.error("Workflow update failed");
+    } finally {
+      setWorkflowSaving(false);
+    }
   };
 
   if (isLoading) {
@@ -146,6 +184,9 @@ export default function TicketDetailPage() {
             <Button variant="outline" size="sm" className="gap-2" onClick={() => setReminderOpen(true)}>
               <BellRing className="h-4 w-4" /> Reminder
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setWorkflowDialog("reopen")}>Reopen</Button>
+            <Button variant="outline" size="sm" onClick={() => setWorkflowDialog("reject")}>Reject</Button>
+            <Button size="sm" onClick={() => setWorkflowDialog("verify")}>Verify Close</Button>
             <Button variant="outline" size="sm" className="gap-2" onClick={exportDetails}>
               <Download className="h-4 w-4" /> Export
             </Button>
@@ -165,6 +206,33 @@ export default function TicketDetailPage() {
             </Card>
 
             <TicketAttachments ticketId={ticket.id} />
+
+            <Card>
+              <CardHeader className="py-4 border-b">
+                <CardTitle className="text-base">Assignment History</CardTitle>
+              </CardHeader>
+              <CardContent className="py-4">
+                {!assignments?.length ? (
+                  <p className="text-sm text-muted-foreground">No assignment history recorded.</p>
+                ) : (
+                  <div className="space-y-3">
+                    {assignments.map((assignment) => (
+                      <div key={assignment.id} className="rounded-md border bg-slate-50 p-3 text-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-medium">{assignment.assignedToName || `User #${assignment.assignedToId}`}</span>
+                          <span className="text-xs text-muted-foreground">{format(new Date(assignment.assignedAt), "dd MMM yyyy, h:mm a")}</span>
+                        </div>
+                        <div className="mt-1 text-muted-foreground">
+                          {assignment.status} by {assignment.assignedByName || "-"}
+                          {assignment.reopenCount ? ` · Reopen #${assignment.reopenCount}` : ""}
+                        </div>
+                        {assignment.remarks && <div className="mt-2 whitespace-pre-wrap">{assignment.remarks}</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Comments */}
             <Card>
@@ -240,6 +308,21 @@ export default function TicketDetailPage() {
                   <span className="text-muted-foreground flex items-center gap-2"><Calendar className="w-4 h-4" /> Due Date</span>
                   <span className="font-medium">{ticket.dueDate ? format(new Date(ticket.dueDate), "dd MMM yyyy") : "-"}</span>
                 </div>
+                <div className="grid grid-cols-1 gap-2 rounded-md bg-slate-50 p-3 text-sm">
+                  <div className="flex justify-between gap-3"><span className="text-muted-foreground">From Department</span><span className="font-medium text-right">{(ticket as any).sourceDepartment || "-"}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-muted-foreground">Service Type</span><span className="font-medium text-right">{(ticket as any).serviceType || "-"}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-muted-foreground">Location</span><span className="font-medium text-right">{(ticket as any).location || "-"}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-muted-foreground">Expected Close</span><span className="font-medium text-right">{(ticket as any).expectedCloseDate ? format(new Date((ticket as any).expectedCloseDate), "dd MMM yyyy") : "-"}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-muted-foreground">Reopens</span><span className="font-medium text-right">{(ticket as any).reopenCount ?? 0}</span></div>
+                  <div className="flex justify-between gap-3"><span className="text-muted-foreground">External</span><span className="font-medium text-right">{(ticket as any).isExternal ? "Yes" : "No"}</span></div>
+                  {(ticket as any).isExternal && (
+                    <>
+                      <div className="flex justify-between gap-3"><span className="text-muted-foreground">Organization</span><span className="font-medium text-right">{(ticket as any).organizationName || "-"}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-muted-foreground">Provider</span><span className="font-medium text-right">{(ticket as any).providerName || "-"}</span></div>
+                      <div className="flex justify-between gap-3"><span className="text-muted-foreground">Phone</span><span className="font-medium text-right">{(ticket as any).externalPhoneNo || "-"}</span></div>
+                    </>
+                  )}
+                </div>
                 {ticket.pendingDays != null && (
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-muted-foreground flex items-center gap-2"><Clock className="w-4 h-4" /> Aging</span>
@@ -265,6 +348,34 @@ export default function TicketDetailPage() {
         target={reminderOpen ? { entityType: "ticket", entityId: ticket.id, reference: ticket.ticketNo, title: ticket.subject } : null}
         onOpenChange={(open) => !open && setReminderOpen(false)}
       />
+      <Dialog open={!!workflowDialog} onOpenChange={(open) => { if (!open) { setWorkflowDialog(null); setWorkflowRemarks(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {workflowDialog === "reopen" ? "Reopen Ticket" : workflowDialog === "reject" ? "Reject Verification" : "Verify and Close"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="rounded-md bg-slate-50 p-3 text-sm">
+              <div className="font-medium">{ticket.ticketNo}</div>
+              <div className="text-muted-foreground">{ticket.subject}</div>
+            </div>
+            <Textarea
+              value={workflowRemarks}
+              onChange={(event) => setWorkflowRemarks(event.target.value)}
+              placeholder={workflowDialog === "verify" ? "Verification remarks (optional)" : "Reason or remarks"}
+              className="min-h-[100px]"
+            />
+            {workflowDialog === "reopen" && (
+              <Input value={ticket.assignedToName || ""} readOnly aria-label="Current assignee" />
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWorkflowDialog(null)}>Cancel</Button>
+            <Button onClick={handleWorkflowSave} disabled={workflowSaving}>{workflowSaving ? "Saving..." : "Save"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

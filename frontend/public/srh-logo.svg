@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 120" role="img" aria-label="SRH Logo">
+  <rect width="240" height="120" fill="#ffffff"/>
+  <g fill="none" stroke="#38a389" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M138 32v55M113 60h50M181 28v58M195 28v58"/>
+    <circle cx="111" cy="60" r="7" fill="#38a389"/>
+    <circle cx="138" cy="30" r="6" fill="#38a389"/>
+    <circle cx="138" cy="88" r="6" fill="#38a389"/>
+    <circle cx="181" cy="28" r="6" fill="#38a389"/>
+    <circle cx="196" cy="88" r="6" fill="#38a389"/>
+    <path d="M151 26l23-16M151 94l23 16M202 32l22-13M202 84l22 13"/>
+    <circle cx="176" cy="9" r="5" fill="#38a389"/>
+    <circle cx="176" cy="111" r="5" fill="#38a389"/>
+    <circle cx="226" cy="18" r="5" fill="#38a389"/>
+    <circle cx="226" cy="98" r="5" fill="#38a389"/>
+  </g>
+  <text x="14" y="72" font-family="Inter, Arial, sans-serif" font-size="52" font-weight="700" fill="#2f2d68">SRH</text>
+</svg>

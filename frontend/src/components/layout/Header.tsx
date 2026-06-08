@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Link } from "wouter";
+import { useConfirmation } from "@/components/shared/ConfirmationProvider";
 
 interface HeaderProps {
   title: string;
@@ -13,6 +14,17 @@ interface HeaderProps {
 
 export function Header({ title, onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth();
+  const confirm = useConfirmation();
+
+  const confirmLogout = async () => {
+    const confirmed = await confirm({
+      title: "Sign out?",
+      description: "Your current session will be closed and you will return to the login page.",
+      confirmText: "Sign Out",
+      variant: "destructive",
+    });
+    if (confirmed) logout();
+  };
 
   return (
     <header className="h-16 bg-white border-b border-border px-4 flex items-center justify-between shrink-0 sticky top-0 z-10">
@@ -70,7 +82,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
                 Profile & Settings
               </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={logout} className="text-destructive focus:bg-destructive/10 cursor-pointer">
+            <DropdownMenuItem onSelect={(event) => { event.preventDefault(); confirmLogout(); }} className="text-destructive focus:bg-destructive/10 cursor-pointer">
               <LogOut className="w-4 h-4 mr-2" />
               Sign Out
             </DropdownMenuItem>

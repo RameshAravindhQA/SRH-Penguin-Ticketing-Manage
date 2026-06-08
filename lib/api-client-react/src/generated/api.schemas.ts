@@ -78,6 +78,7 @@ export interface UserUpdate {
   role?: string;
   roleId?: number;
   reportingManagerId?: number;
+  avatarUrl?: string;
   status?: string;
 }
 
@@ -153,15 +154,65 @@ export interface Ticket {
   /** @nullable */
   assignedToAvatar?: string | null;
   /** @nullable */
+  assignedDepartmentId?: number | null;
+  /** @nullable */
+  assignedDepartmentName?: string | null;
+  /** @nullable */
+  sourceDepartment?: string | null;
+  /** @nullable */
   projectId?: number | null;
   /** @nullable */
   projectName?: string | null;
   /** @nullable */
+  systemType?: string | null;
+  /** @nullable */
+  systemSubType?: string | null;
+  /** @nullable */
+  systemTypeNo?: string | null;
+  /** @nullable */
+  serviceType?: string | null;
+  /** @nullable */
+  institute?: string | null;
+  /** @nullable */
+  location?: string | null;
+  /** @nullable */
+  assignedAt?: string | null;
+  /** @nullable */
+  startedAt?: string | null;
+  /** @nullable */
   dueDate?: string | null;
+  /** @nullable */
+  expectedCloseDate?: string | null;
   /** @nullable */
   resolvedAt?: string | null;
   /** @nullable */
   closedAt?: string | null;
+  /** @nullable */
+  verifiedAt?: string | null;
+  /** @nullable */
+  verificationRemarks?: string | null;
+  reopenCount?: number;
+  /** @nullable */
+  reopenedAt?: string | null;
+  /** @nullable */
+  reopenRemarks?: string | null;
+  /** @nullable */
+  reviewSchedule?: number | null;
+  /** @nullable */
+  reviewDays?: string | null;
+  /** @nullable */
+  reviewDuration?: string | null;
+  isExternal?: boolean;
+  /** @nullable */
+  organizationName?: string | null;
+  /** @nullable */
+  providerName?: string | null;
+  /** @nullable */
+  externalPersonRole?: string | null;
+  /** @nullable */
+  externalPhoneNo?: string | null;
+  /** @nullable */
+  supportingPerson?: string | null;
   /** @nullable */
   pendingDays?: number | null;
   slaBreached?: boolean;
@@ -178,6 +229,21 @@ export interface TicketInput {
   assignedToId?: number;
   projectId?: number;
   dueDate?: string;
+  expectedCloseDate?: string;
+  sourceDepartment?: string;
+  serviceType?: string;
+  location?: string;
+  systemType?: string;
+  systemSubType?: string;
+  reviewSchedule?: number;
+  reviewDays?: string;
+  reviewDuration?: string;
+  isExternal?: boolean;
+  organizationName?: string;
+  providerName?: string;
+  externalPersonRole?: string;
+  externalPhoneNo?: string;
+  supportingPerson?: string;
 }
 
 export interface TicketUpdate {
@@ -186,6 +252,21 @@ export interface TicketUpdate {
   priority?: string;
   categoryId?: number;
   dueDate?: string;
+  expectedCloseDate?: string;
+  sourceDepartment?: string;
+  serviceType?: string;
+  location?: string;
+  systemType?: string;
+  systemSubType?: string;
+  reviewSchedule?: number;
+  reviewDays?: string;
+  reviewDuration?: string;
+  isExternal?: boolean;
+  organizationName?: string;
+  providerName?: string;
+  externalPersonRole?: string;
+  externalPhoneNo?: string;
+  supportingPerson?: string;
 }
 
 export interface TicketStatusUpdate {
@@ -201,6 +282,81 @@ export interface TicketAssign {
 export interface TicketForward {
   forwardToId: number;
   remarks?: string;
+}
+
+export interface TicketAssignmentHistory {
+  id: number;
+  ticketId: number;
+  assignedToId: number;
+  /** @nullable */
+  assignedToName?: string | null;
+  /** @nullable */
+  assignedById?: number | null;
+  /** @nullable */
+  assignedByName?: string | null;
+  assignedAt: string;
+  /** @nullable */
+  startedAt?: string | null;
+  /** @nullable */
+  endedAt?: string | null;
+  status: string;
+  /** @nullable */
+  remarks?: string | null;
+  reopenCount: number;
+}
+
+export interface TicketReopenInput {
+  remarks: string;
+  assignedToId?: number;
+}
+
+export interface TicketVerifyInput {
+  approved: boolean;
+  remarks?: string;
+}
+
+export interface TicketRoutine {
+  id: number;
+  routineNo: string;
+  subject: string;
+  /** @nullable */
+  description?: string | null;
+  status: string;
+  priority: string;
+  /** @nullable */
+  categoryId?: number | null;
+  /** @nullable */
+  categoryName?: string | null;
+  type?: string;
+  schedule: string;
+  /** @nullable */
+  departmentId?: number | null;
+  /** @nullable */
+  departmentName?: string | null;
+  /** @nullable */
+  raisedByName?: string | null;
+  /** @nullable */
+  startDate?: string | null;
+  /** @nullable */
+  closingDate?: string | null;
+  assignToIds?: number[];
+  assignCcIds?: number[];
+  createdAt: string;
+}
+
+export interface TicketRoutineInput {
+  subject: string;
+  description?: string;
+  priority: string;
+  categoryId?: number;
+  type?: string;
+  schedule: string;
+  departmentId?: number;
+  startDate?: string;
+  closingDate?: string;
+  assignToIds?: number[];
+  assignCcIds?: number[];
+  days?: number[];
 }
 
 export interface Comment {
