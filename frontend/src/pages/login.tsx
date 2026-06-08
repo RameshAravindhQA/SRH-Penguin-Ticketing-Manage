@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useLogin, useListDepartments } from "@workspace/api-client-react";
-import { Building2, CalendarClock, Eye, EyeOff, Lock, User } from "lucide-react";
+import { Building2, Eye, EyeOff, Lock, ShieldCheck, User } from "lucide-react";
 import { toast } from "sonner";
 
 const loginSchema = z.object({
@@ -24,19 +24,14 @@ const loginSchema = z.object({
 export default function LoginPage() {
   const { setAuth, token } = useAuth();
   const [_, setLocation] = useLocation();
-  const [showWelcome, setShowWelcome] = useState(false);
-  const [showReminder, setShowReminder] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [loginFlowActive, setLoginFlowActive] = useState(false);
-  const [loginUser, setLoginUser] = useState<any>(null);
-  const [loginReminders, setLoginReminders] = useState<any[]>([]);
   const loginMutation = useLogin();
   const { data: departments } = useListDepartments();
 
   useEffect(() => {
-    if (token && !loginFlowActive && !showWelcome && !showReminder) setLocation("/dashboard");
-  }, [loginFlowActive, showReminder, showWelcome, token, setLocation]);
+    if (token) setLocation("/dashboard");
+  }, [token, setLocation]);
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -56,60 +51,44 @@ export default function LoginPage() {
       { data: values },
       {
         onSuccess: (data) => {
-          setLoginFlowActive(true);
+          sessionStorage.setItem("login_welcome", JSON.stringify({
+            loginAt: new Date().toISOString(),
+            lastLogin: data.user.lastLogin || null,
+          }));
           setAuth(data.token, data.user);
-          setLoginUser(data.user);
-          const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/+$/, "");
-          fetch(`${baseUrl}/api/calendar/events`, { headers: { Authorization: `Bearer ${data.token}` } })
-            .then(response => response.ok ? response.json() : [])
-            .then(events => {
-              const now = Date.now();
-              const nextDay = now + 24 * 60 * 60 * 1000;
-              setLoginReminders((events || []).filter((event: any) => {
-                const time = new Date(event.startDate).getTime();
-                return time >= now && time <= nextDay;
-              }));
-            })
-            .catch(() => setLoginReminders([]));
-          toast.success(`Welcome ${data.user.name}`);
-          setShowWelcome(true);
+          toast.success(`Signed in as ${data.user.name}`);
+          setLocation("/dashboard");
         },
         onError: () => toast.error("Invalid credentials"),
       },
     );
   };
 
-  const handleContinue = () => {
-    setShowWelcome(false);
-    if (loginReminders.length) setShowReminder(true);
-    else {
-      setLoginFlowActive(false);
-      setLocation("/dashboard");
-    }
-  };
-  const handleReminderClose = () => {
-    setShowReminder(false);
-    setLoginFlowActive(false);
-    setLocation("/dashboard");
-  };
-  const hour = new Date().getHours();
-  const wish = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
-
   return (
     <div className="min-h-screen bg-white">
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-        <section className="flex min-h-[42vh] items-center justify-center bg-slate-50 p-6 sm:p-8 lg:min-h-screen">
-          <div className="max-w-md text-center">
-            <img src="/srh-logo.png" alt="SRH" className="mx-auto mb-6 h-24 w-48 object-contain sm:h-28 sm:w-56" />
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">SRH Penguin Ticketing Management System</h1>
-            <p className="mt-3 text-sm text-slate-600">Enterprise ticketing, projects, documents, reminders, and team workflow.</p>
+        <section className="flex min-h-[46vh] items-center justify-center bg-slate-50 p-6 sm:p-8 lg:min-h-screen">
+          <div className="flex w-full max-w-xl flex-col items-center text-center">
+            <img src="/srh-logo.png" alt="SRH" className="mb-5 h-20 w-44 object-contain sm:h-24 sm:w-52" />
+            <img
+              src="https://static-00.iconduck.com/assets.00/team-work-illustration-512x436-dw4dx8fk.png"
+              alt="IT employees working together"
+              className="mb-6 h-52 w-full max-w-sm object-contain sm:h-64"
+              onError={(event) => { event.currentTarget.style.display = "none"; }}
+            />
+            <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">SRH Penguin Ticketing Management System</h1>
+            <p className="mt-3 max-w-md text-sm text-slate-600">Enterprise ticketing, projects, documents, reminders, and team workflow for IT operations.</p>
           </div>
         </section>
-        <section className="flex min-h-[58vh] items-center justify-center bg-gradient-to-br from-sky-50 via-emerald-50 to-indigo-50 p-4 sm:p-6 lg:min-h-screen">
-          <Card className="w-full max-w-md border-slate-200 shadow-lg">
+        <section className="relative flex min-h-[54vh] items-center justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-emerald-900 p-4 sm:p-6 lg:min-h-screen">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(56,189,248,0.22),transparent_30%),radial-gradient(circle_at_80%_70%,rgba(16,185,129,0.2),transparent_35%)]" />
+          <Card className="relative w-full max-w-md border-white/20 bg-white/95 shadow-2xl backdrop-blur">
             <CardHeader>
+              <div className="mb-2 flex h-11 w-11 items-center justify-center rounded-md bg-blue-600 text-white">
+                <ShieldCheck className="h-5 w-5" />
+              </div>
               <CardTitle className="text-2xl">Sign In</CardTitle>
-              <CardDescription>Use your employee code or email.</CardDescription>
+              <CardDescription>Access your ticketing workspace securely.</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...form}>
@@ -172,54 +151,6 @@ export default function LoginPage() {
           </Card>
         </section>
       </div>
-
-      <Dialog open={showWelcome} onOpenChange={setShowWelcome}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Hi {loginUser?.name || "there"}, {wish}</DialogTitle>
-            <DialogDescription>You have successfully logged in.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-4 text-sm">
-            {[
-              ["Employee Name", loginUser?.name],
-              ["Employee Code", loginUser?.employeeCode],
-              ["Department", loginUser?.departmentName || "Not assigned"],
-              ["Login Time", new Date().toLocaleString()],
-              ["Last Login", loginUser?.lastLogin ? new Date(loginUser.lastLogin).toLocaleString() : "First login"],
-            ].map(([label, value]) => (
-              <div key={label} className="flex justify-between gap-4 rounded-md bg-slate-50 px-3 py-2">
-                <span className="text-muted-foreground">{label}</span>
-                <span className="text-right font-medium">{value}</span>
-              </div>
-            ))}
-            <div className="rounded-md border bg-blue-50 px-3 py-2 text-blue-900">
-              <span className="font-medium">Today:</span> Small progress today keeps every workflow moving tomorrow.
-            </div>
-          </div>
-          <DialogFooter><Button onClick={handleContinue} className="w-full">Continue</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showReminder} onOpenChange={setShowReminder}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Upcoming Reminders</DialogTitle>
-            <DialogDescription>These reminders are due in the next 24 hours.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-3">
-            {loginReminders.map(item => (
-              <button key={item.id} className="flex items-center justify-between rounded-md border bg-amber-50 px-3 py-2 text-left text-sm text-amber-900 hover:bg-amber-100" onClick={() => { setShowReminder(false); setLocation("/reminders"); }}>
-                <span className="flex items-center gap-2"><CalendarClock className="h-4 w-4" /> {item.title}</span>
-                <span className="text-xs font-semibold uppercase">{new Date(item.startDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
-              </button>
-            ))}
-          </div>
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={handleReminderClose}>Snooze</Button>
-            <Button onClick={handleReminderClose}>Dismiss</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={forgotOpen} onOpenChange={setForgotOpen}>
         <DialogContent>

@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 import {
   useGetDashboardStats,
   useGetMe,
@@ -29,6 +31,10 @@ import {
   CheckCircle2,
   Clock,
   Inbox,
+  CalendarClock,
+  LogIn,
+  Quote,
+  Sparkles,
   Target,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -86,6 +92,9 @@ export default function DashboardPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [draftFilters, setDraftFilters] = useState<DashboardFilters>(emptyFilters);
   const [filters, setFilters] = useState<DashboardFilters>(emptyFilters);
+  const [welcomeOpen, setWelcomeOpen] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const [loginMeta, setLoginMeta] = useState<{ loginAt?: string; lastLogin?: string | null } | null>(null);
 
   const ticketTypes = useMemo(() => {
     return Array.from(new Set((tickets || []).map(ticket => ticket.type).filter(Boolean))).sort();
@@ -117,6 +126,15 @@ export default function DashboardPage() {
     });
   }, [filters, me?.id, projects]);
 
+  const upcomingReminders = useMemo(() => {
+    const now = Date.now();
+    const nextDay = now + 24 * 60 * 60 * 1000;
+    return (calendarEvents || []).filter(event => {
+      const time = new Date(event.startDate).getTime();
+      return time >= now && time <= nextDay;
+    }).slice(0, 5);
+  }, [calendarEvents]);
+
   const cardCounts = {
     total: tickets ? filteredTickets.length : stats?.totalIncoming ?? 0,
     open: tickets ? filteredTickets.filter(ticket => matchesStatusGroup(ticket.status, "open-yts")).length : stats?.openTickets ?? 0,
@@ -141,11 +159,35 @@ export default function DashboardPage() {
     return () => window.clearInterval(timer);
   }, [refetchProjects, refetchStats, refetchTickets]);
 
+  useEffect(() => {
+    if (!me) return;
+    const raw = sessionStorage.getItem("login_welcome");
+    if (!raw) return;
+    try {
+      setLoginMeta(JSON.parse(raw));
+    } catch {
+      setLoginMeta({ loginAt: new Date().toISOString(), lastLogin: null });
+    }
+    setWelcomeOpen(true);
+  }, [me]);
+
   const applyFilters = () => setFilters(draftFilters);
   const resetFilters = () => {
     setDraftFilters(emptyFilters);
     setFilters(emptyFilters);
     setActiveTab("all");
+  };
+
+  const hour = new Date().getHours();
+  const wish = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const closeWelcome = () => {
+    setWelcomeOpen(false);
+    if (upcomingReminders.length) setReminderOpen(true);
+    else sessionStorage.removeItem("login_welcome");
+  };
+  const closeReminders = () => {
+    setReminderOpen(false);
+    sessionStorage.removeItem("login_welcome");
   };
 
   return (
@@ -332,6 +374,74 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      <Dialog open={welcomeOpen} onOpenChange={(open) => { if (!open) closeWelcome(); }}>
+        <DialogContent className="overflow-hidden p-0 sm:max-w-2xl">
+          <div className="bg-gradient-to-br from-slate-950 via-blue-950 to-emerald-900 px-6 py-6 text-white">
+            <DialogHeader>
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-md bg-white/15">
+                <Sparkles className="h-6 w-6 text-amber-200" />
+              </div>
+              <DialogTitle className="text-2xl text-white">Hi {me?.name || "there"}, {wish}</DialogTitle>
+              <DialogDescription className="text-blue-100">
+                Welcome back to SRH Penguin Ticketing Management System.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="grid gap-4 p-6">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {[
+                ["Employee Code", me?.employeeCode || "-"],
+                ["Department", me?.departmentName || "Not assigned"],
+                ["Role", me?.role || "-"],
+                ["Login Time", loginMeta?.loginAt ? new Date(loginMeta.loginAt).toLocaleString() : new Date().toLocaleString()],
+                ["Last Login", loginMeta?.lastLogin ? new Date(loginMeta.lastLogin).toLocaleString() : "First login"],
+                ["Upcoming Reminders", String(upcomingReminders.length)],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-md border bg-slate-50 px-3 py-2">
+                  <div className="text-xs font-medium uppercase text-muted-foreground">{label}</div>
+                  <div className="mt-1 truncate text-sm font-semibold text-slate-900">{value}</div>
+                </div>
+              ))}
+            </div>
+            <div className="rounded-md border border-blue-100 bg-blue-50 p-4 text-sm text-blue-950">
+              <div className="mb-2 flex items-center gap-2 font-semibold"><Quote className="h-4 w-4" /> Daily Motivation</div>
+              Focus on the next useful update: acknowledge, assign, resolve, and keep the team informed.
+            </div>
+          </div>
+          <DialogFooter className="border-t bg-slate-50 px-6 py-4">
+            <Button onClick={closeWelcome} className="gap-2">
+              <LogIn className="h-4 w-4" />
+              Continue to Dashboard
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={reminderOpen} onOpenChange={(open) => { if (!open) closeReminders(); }}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Upcoming Reminders</DialogTitle>
+            <DialogDescription>These reminders are due in the next 24 hours.</DialogDescription>
+          </DialogHeader>
+          <div className="grid max-h-[360px] gap-3 overflow-auto py-2">
+            {upcomingReminders.map(item => (
+              <button key={item.id} className="flex items-center justify-between gap-4 rounded-md border bg-amber-50 px-3 py-3 text-left text-sm text-amber-950 hover:bg-amber-100" onClick={closeReminders}>
+                <span className="flex min-w-0 items-center gap-2">
+                  <CalendarClock className="h-4 w-4 shrink-0" />
+                  <span className="truncate font-medium">{item.title}</span>
+                </span>
+                <Badge className="shrink-0 bg-amber-100 text-amber-800">{format(new Date(item.startDate), "dd MMM, h:mm a")}</Badge>
+              </button>
+            ))}
+            {!upcomingReminders.length && <div className="rounded-md border border-dashed p-6 text-center text-sm text-muted-foreground">No reminders due in the next 24 hours.</div>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeReminders}>Snooze</Button>
+            <Button onClick={closeReminders}>Dismiss</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }
