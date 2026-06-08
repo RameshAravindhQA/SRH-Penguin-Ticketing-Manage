@@ -1,4 +1,4 @@
-import { db, usersTable, departmentsTable, rolesTable, categoriesTable, ticketsTable, projectsTable, todosTable, notificationsTable, calendarEventsTable, timesheetsTable } from "@workspace/db";
+import { db, usersTable, departmentsTable, rolesTable, categoriesTable, ticketTypesTable, subCategoriesTable, ticketsTable, projectsTable, todosTable, notificationsTable, calendarEventsTable, timesheetsTable } from "@workspace/db";
 import bcrypt from "bcryptjs";
 
 async function seed() {
@@ -100,13 +100,29 @@ async function seed() {
   ]).returning().onConflictDoNothing();
 
   // Categories
-  const [hwCat, swCat, netCat, emailCat, hrCat] = await db.insert(categoriesTable).values([
+  const [hwCat, swCat, netCat, emailCat, hrCat, infraCat, securityCat] = await db.insert(categoriesTable).values([
     { name: "Hardware", type: "ticket", description: "Hardware issues and requests" },
     { name: "Software", type: "ticket", description: "Software installation and bugs" },
     { name: "Network", type: "ticket", description: "Network connectivity issues" },
     { name: "Email", type: "ticket", description: "Email and communication issues" },
     { name: "HR Services", type: "ticket", description: "HR-related service requests" },
+    { name: "Infrastructure", type: "project", description: "Infrastructure projects" },
+    { name: "Security", type: "project", description: "Security projects" },
   ]).returning().onConflictDoNothing();
+
+  await db.insert(ticketTypesTable).values([
+    { name: "Normal Ticket", code: "normal", description: "One-time ticket routed to common or selected user worklist" },
+    { name: "Routine Ticket", code: "routine", description: "Recurring ticket for daily, weekly, monthly, or yearly work" },
+  ]).onConflictDoNothing();
+
+  await db.insert(subCategoriesTable).values([
+    { name: "Laptop / Desktop", categoryId: hwCat?.id ?? 1, type: "ticket", description: "Endpoint hardware support" },
+    { name: "License Request", categoryId: swCat?.id ?? 2, type: "ticket", description: "Software licensing and access" },
+    { name: "VPN / Wi-Fi", categoryId: netCat?.id ?? 3, type: "ticket", description: "Connectivity and remote access" },
+    { name: "Mailbox Setup", categoryId: emailCat?.id ?? 4, type: "ticket", description: "Email account configuration" },
+    { name: "Network Upgrade", categoryId: infraCat?.id ?? 6, type: "project", description: "Network and infrastructure upgrade projects" },
+    { name: "Security Review", categoryId: securityCat?.id ?? 7, type: "project", description: "Security assessment and remediation projects" },
+  ]).onConflictDoNothing();
 
   const adminId = admin?.id ?? 1;
   const teamLeadId = teamLead?.id ?? 2;
@@ -314,7 +330,7 @@ async function seed() {
       endDate: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 3, 15, 30),
       type: "meeting",
       entityType: "project",
-      entityRef: "PRJ-1001",
+      entityId: projects[0]?.id,
     },
     {
       userId: adminId,
@@ -323,7 +339,7 @@ async function seed() {
       startDate: new Date(now.getFullYear(), now.getMonth(), now.getDate(), 17, 0),
       type: "reminder",
       entityType: "ticket",
-      entityRef: "TKT-1008",
+      entityId: tickets[7]?.id,
     },
     {
       userId: adminId,

@@ -7,3 +7,4 @@ export * from "./notifications";
 export * from "./calendar";
 export * from "./timesheets";
 export * from "./audit";
+export * from "./documents";

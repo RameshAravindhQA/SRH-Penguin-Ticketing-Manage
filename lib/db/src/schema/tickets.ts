@@ -10,9 +10,11 @@ export const ticketsTable = pgTable("tickets", {
   status: text("status").notNull().default("open"),
   priority: text("priority").notNull().default("medium"),
   categoryId: integer("category_id"),
+  subCategoryId: integer("sub_category_id"),
   type: text("type").notNull().default("general"),
   createdById: integer("created_by_id").notNull(),
   assignedToId: integer("assigned_to_id"),
+  assignedDepartmentId: integer("assigned_department_id"),
   projectId: integer("project_id"),
   dueDate: timestamp("due_date", { withTimezone: true }),
   resolvedAt: timestamp("resolved_at", { withTimezone: true }),
@@ -43,9 +45,22 @@ export const ticketHistoryTable = pgTable("ticket_history", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const ticketAttachmentsTable = pgTable("ticket_attachments", {
+  id: serial("id").primaryKey(),
+  ticketId: integer("ticket_id").notNull(),
+  fileName: text("file_name").notNull(),
+  mimeType: text("mime_type").notNull(),
+  sizeBytes: integer("size_bytes").notNull(),
+  contentBase64: text("content_base64").notNull(),
+  uploadedById: integer("uploaded_by_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const insertTicketSchema = createInsertSchema(ticketsTable).omit({ id: true, ticketNo: true, createdAt: true, updatedAt: true });
 export const insertCommentSchema = createInsertSchema(ticketCommentsTable).omit({ id: true, createdAt: true });
+export const insertTicketAttachmentSchema = createInsertSchema(ticketAttachmentsTable).omit({ id: true, createdAt: true });
 
 export type Ticket = typeof ticketsTable.$inferSelect;
 export type InsertTicket = z.infer<typeof insertTicketSchema>;
 export type TicketComment = typeof ticketCommentsTable.$inferSelect;
+export type TicketAttachment = typeof ticketAttachmentsTable.$inferSelect;

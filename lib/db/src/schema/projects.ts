@@ -10,6 +10,7 @@ export const projectsTable = pgTable("projects", {
   status: text("status").notNull().default("created"),
   priority: text("priority").notNull().default("medium"),
   category: text("category"),
+  subCategoryId: integer("sub_category_id"),
   type: text("type"),
   progress: integer("progress").notNull().default(0),
   ownerId: integer("owner_id"),
@@ -29,8 +30,17 @@ export const projectCollaboratorsTable = pgTable("project_collaborators", {
   addedAt: timestamp("added_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+export const projectCommentsTable = pgTable("project_comments", {
+  id: serial("id").primaryKey(),
+  projectId: integer("project_id").notNull(),
+  content: text("content").notNull(),
+  authorId: integer("author_id").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 export const insertProjectSchema = createInsertSchema(projectsTable).omit({ id: true, projectNo: true, createdAt: true, updatedAt: true });
 
 export type Project = typeof projectsTable.$inferSelect;
 export type InsertProject = z.infer<typeof insertProjectSchema>;
 export type ProjectCollaborator = typeof projectCollaboratorsTable.$inferSelect;
+export type ProjectComment = typeof projectCommentsTable.$inferSelect;

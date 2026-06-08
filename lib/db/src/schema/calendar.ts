@@ -13,6 +13,7 @@ export const calendarEventsTable = pgTable("calendar_events", {
   entityType: text("entity_type"),
   entityId: integer("entity_id"),
   meetingLink: text("meeting_link"),
+  attendeeIds: text("attendee_ids"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
