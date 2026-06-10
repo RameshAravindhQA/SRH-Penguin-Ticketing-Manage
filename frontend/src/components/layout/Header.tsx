@@ -27,12 +27,12 @@ export function Header({ title, onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-border px-4 flex items-center justify-between shrink-0 sticky top-0 z-10">
-      <div className="flex items-center gap-4">
-        <button onClick={onMenuClick} className="p-2 -ml-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-secondary transition-colors">
+    <header className="h-16 bg-white border-b border-border px-3 sm:px-4 flex items-center justify-between gap-3 shrink-0 sticky top-0 z-10">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+        <button onClick={onMenuClick} className="p-2 -ml-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-secondary transition-colors" aria-label="Toggle navigation">
           <Menu className="w-5 h-5" />
         </button>
-        <h1 className="text-xl font-semibold text-foreground tracking-tight">{title}</h1>
+        <h1 className="truncate text-base font-semibold text-foreground tracking-tight sm:text-xl">{title}</h1>
         {user?.role && (
           <Badge variant="secondary" className="text-xs font-semibold uppercase bg-blue-100 text-blue-700 hover:bg-blue-100 hidden md:inline-flex">
             {user.role}
@@ -40,8 +40,8 @@ export function Header({ title, onMenuClick }: HeaderProps) {
         )}
       </div>
 
-      <div className="flex items-center gap-3">
-        <button className="p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-secondary transition-colors">
+      <div className="flex shrink-0 items-center gap-1 sm:gap-2 lg:gap-3">
+        <button className="hidden p-2 text-muted-foreground hover:text-foreground rounded-full hover:bg-secondary transition-colors sm:inline-flex" aria-label="Search">
           <Search className="w-5 h-5" />
         </button>
         
@@ -58,7 +58,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
           </div>
         </Link>
 
-        <div className="h-6 w-px bg-border mx-1"></div>
+        <div className="hidden h-6 w-px bg-border mx-1 sm:block"></div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -72,7 +72,7 @@ export function Header({ title, onMenuClick }: HeaderProps) {
               <div className="hidden md:flex flex-col items-start">
                 <span className="text-sm font-medium leading-none">{user?.name || "User"}</span>
               </div>
-              <ChevronDown className="w-4 h-4 text-muted-foreground" />
+              <ChevronDown className="hidden w-4 h-4 text-muted-foreground sm:block" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">

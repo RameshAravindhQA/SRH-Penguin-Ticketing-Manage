@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserSelect } from "@/components/shared/UserSelect";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -185,18 +186,7 @@ export default function CreateProjectPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Project Manager / Owner</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value?.toString()}>
-                          <FormControl>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select user" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {users?.map(u => (
-                              <SelectItem key={u.id} value={u.id.toString()}>{u.name}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <UserSelect users={users} value={field.value?.toString() ?? ""} onChange={field.onChange} className="w-full" />
                         <FormMessage />
                       </FormItem>
                     )}

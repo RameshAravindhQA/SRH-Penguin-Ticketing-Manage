@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useLocation } from "wouter";
 import { User } from "@workspace/api-client-react";
 import { toast } from "sonner";
+import { RBAC_PERMISSIONS } from "@/lib/rbac";
 
 interface AuthContextType {
   token: string | null;
@@ -30,6 +31,7 @@ const localBypassUser: User = {
   reportingManagerName: null,
   avatarUrl: null,
   status: "active",
+  permissions: [...RBAC_PERMISSIONS],
   lastLogin: new Date().toISOString(),
   createdAt: new Date().toISOString(),
 };

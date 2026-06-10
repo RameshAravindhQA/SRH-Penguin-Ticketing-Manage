@@ -280,6 +280,10 @@ router.post("/tickets", authMiddleware, async (req, res): Promise<void> => {
   if (assignedToId && assignedToId !== authUser.userId) {
     await createNotification({ userId: assignedToId, type: "ticket_assigned", message: `New ticket ${ticketNo} has been assigned to you`, entityType: "ticket", entityId: (ticket as any).id, entityRef: ticketNo });
   }
+  if (assignedToId && (dueDate || expectedCloseDate)) {
+    const deadline = new Date(dueDate ?? expectedCloseDate).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    await createNotification({ userId: Number(assignedToId), type: "ticket_due_date", message: `Ticket ${ticketNo} is due by ${deadline}`, entityType: "ticket", entityId: (ticket as any).id, entityRef: ticketNo });
+  }
   await upsertEntityReminder({
     userId: assignedToId ? Number(assignedToId) : authUser.userId,
     title: `Ticket: ${ticketNo} - ${subject}`,
@@ -367,6 +371,10 @@ router.patch("/tickets/:id", authMiddleware, async (req, res): Promise<void> => 
   if (!ticket) { res.status(404).json({ error: "Ticket not found" }); return; }
   const authUser = (req as any).user;
   await createAuditLog({ action: "update", entityType: "ticket", entityId: ticket.id, entityRef: ticket.ticketNo, userId: authUser.userId });
+  if ((dueDate !== undefined || expectedCloseDate !== undefined) && (ticket as any).assignedToId && ((ticket as any).dueDate || (ticket as any).expectedCloseDate)) {
+    const deadline = new Date((ticket as any).dueDate ?? (ticket as any).expectedCloseDate).toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+    await createNotification({ userId: Number((ticket as any).assignedToId), type: "ticket_due_date", message: `Ticket ${(ticket as any).ticketNo} deadline changed to ${deadline}`, entityType: "ticket", entityId: (ticket as any).id, entityRef: (ticket as any).ticketNo });
+  }
   await upsertEntityReminder({
     userId: (ticket as any).assignedToId ?? authUser.userId,
     title: `Ticket: ${(ticket as any).ticketNo} - ${(ticket as any).subject}`,

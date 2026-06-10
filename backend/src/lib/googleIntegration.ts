@@ -71,7 +71,11 @@ function normalizeAttendeeIds(ids?: number[]): number[] {
   return [...new Set((ids ?? []).map(Number).filter(Number.isFinite))];
 }
 
-async function getAccessToken(): Promise<string> {
+export function isGoogleCalendarConfigured(): boolean {
+  return isConfigured();
+}
+
+export async function getGoogleAccessToken(): Promise<string> {
   const body = new URLSearchParams({
     client_id: process.env.GOOGLE_CLIENT_ID ?? "",
     client_secret: process.env.GOOGLE_CLIENT_SECRET ?? "",
@@ -96,7 +100,7 @@ async function getAccessToken(): Promise<string> {
 }
 
 async function googleRequest<T>(path: string, init: RequestInit): Promise<T> {
-  const token = await getAccessToken();
+  const token = await getGoogleAccessToken();
   const response = await fetch(`${GOOGLE_CALENDAR_BASE}${path}`, {
     ...init,
     headers: {
@@ -258,7 +262,7 @@ export async function syncCalendarEventToGoogle(input: SyncInput): Promise<Googl
 export async function deleteGoogleCalendarEvent(googleEventId: string | null | undefined): Promise<void> {
   if (!googleEventId || !isConfigured()) return;
   try {
-    const token = await getAccessToken();
+    const token = await getGoogleAccessToken();
     const query = new URLSearchParams({ sendUpdates: "all" });
     const response = await fetch(
       `${GOOGLE_CALENDAR_BASE}/calendars/${encodeURIComponent(calendarId())}/events/${encodeURIComponent(googleEventId)}?${query}`,
@@ -270,6 +274,89 @@ export async function deleteGoogleCalendarEvent(googleEventId: string | null | u
   } catch (err) {
     logger.error({ err, googleEventId }, "Google Calendar delete failed");
   }
+}
+
+export async function checkGoogleAvailability(input: {
+  startDate: Date | string;
+  endDate?: Date | string | null;
+  attendeeIds?: number[];
+}): Promise<{ configured: boolean; attendees: Array<GoogleAttendee & { busy: Array<{ start: string; end: string }> }> } | null> {
+  if (!isConfigured()) return { configured: false, attendees: [] };
+  const attendees = await attendeesForUserIds(input.attendeeIds ?? []);
+  if (!attendees.length) return { configured: true, attendees: [] };
+  const start = toDate(input.startDate);
+  const end = eventEnd(start, input.endDate);
+  try {
+    const result = await googleRequest<any>("/freeBusy", {
+      method: "POST",
+      body: JSON.stringify({
+        timeMin: start.toISOString(),
+        timeMax: end.toISOString(),
+        timeZone: timezone(),
+        items: attendees.map(attendee => ({ id: attendee.email })),
+      }),
+    });
+    return {
+      configured: true,
+      attendees: attendees.map(attendee => ({
+        ...attendee,
+        busy: result.calendars?.[attendee.email]?.busy ?? [],
+      })),
+    };
+  } catch (err) {
+    logger.error({ err }, "Google Calendar free/busy check failed");
+    return null;
+  }
+}
+
+export async function pullGoogleEventIntoLocal(googleEventId: string): Promise<boolean> {
+  if (!isConfigured()) return false;
+  const [local] = await q<{ id: number }>`SELECT TOP 1 id FROM calendar_events WHERE google_event_id = ${googleEventId}`;
+  if (!local) return false;
+  try {
+    const event = await googleRequest<any>(
+      `/calendars/${encodeURIComponent(calendarId())}/events/${encodeURIComponent(googleEventId)}`,
+      { method: "GET" },
+    );
+    const start = event.start?.dateTime ?? event.start?.date;
+    const end = event.end?.dateTime ?? event.end?.date ?? null;
+    if (!start) return false;
+    await qRaw(
+      `UPDATE calendar_events
+       SET title = @title, description = @description, start_date = @startDate, end_date = @endDate,
+           meeting_link = COALESCE(@meetingLink, meeting_link), google_meet_link = @meetingLink,
+           google_html_link = @htmlLink, google_sync_status = @status, google_sync_error = NULL,
+           google_synced_at = SYSDATETIMEOFFSET()
+       WHERE id = @id`,
+      {
+        id: local.id,
+        title: event.summary ?? "Google Calendar event",
+        description: event.description ?? null,
+        startDate: new Date(start),
+        endDate: end ? new Date(end) : null,
+        meetingLink: event.hangoutLink ?? event.conferenceData?.entryPoints?.find((entry: any) => entry.entryPointType === "video")?.uri ?? null,
+        htmlLink: event.htmlLink ?? null,
+        status: "synced_from_google",
+      },
+    );
+    return true;
+  } catch (err) {
+    logger.error({ err, googleEventId }, "Google Calendar pull failed");
+    return false;
+  }
+}
+
+export async function pullKnownGoogleEventsIntoLocal(): Promise<{ checked: number; updated: number }> {
+  if (!isConfigured()) return { checked: 0, updated: 0 };
+  const rows = await q<{ googleEventId: string }>`
+    SELECT google_event_id AS googleEventId FROM calendar_events
+    WHERE google_event_id IS NOT NULL AND google_event_id <> ''
+  `;
+  let updated = 0;
+  for (const row of rows) {
+    if (await pullGoogleEventIntoLocal(row.googleEventId)) updated += 1;
+  }
+  return { checked: rows.length, updated };
 }
 
 export async function deleteEntityReminder(entityType: EntityType, entityId: number): Promise<void> {

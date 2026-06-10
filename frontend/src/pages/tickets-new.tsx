@@ -16,12 +16,17 @@ import { toast } from "sonner";
 import { CheckCircle2, Clock, Loader2, PlayCircle, Plus, Search, Ticket as TicketIcon } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { listSubCategories, listTicketTypes } from "@/lib/master-data";
-import { useListTickets } from "@workspace/api-client-react";
+import { getListTicketsQueryKey, Ticket as TicketType, useListTickets, useUpdateTicket, useUpdateTicketStatus } from "@workspace/api-client-react";
 import { TicketTable } from "@/components/tickets/TicketTable";
+import { TicketEditDialog, TicketEditValues } from "@/components/tickets/TicketEditDialog";
+import { TicketActionDialog } from "@/components/tickets/TicketActionDialogs";
 import { AttachmentPicker } from "@/components/tickets/TicketAttachments";
 import { ExportMenu, TableControls, usePagination } from "@/components/shared/TableControls";
 import { ModuleStats } from "@/components/shared/ModuleStats";
 import { uploadTicketAttachments, type AttachmentUploadFile } from "@/lib/ticket-attachments";
+import { AuditLogDialog } from "@/components/shared/AuditLogDialog";
+import { ReminderDialog } from "@/components/shared/ReminderDialog";
+import { useQueryClient } from "@tanstack/react-query";
 
 const ticketSchema = z.object({
   subject: z.string().min(1, "Subject is required"),
@@ -42,7 +47,15 @@ export default function RaiseTicketPage() {
   const [statusFilter, setStatusFilter] = React.useState("all");
   const [priorityFilter, setPriorityFilter] = React.useState("all");
   const [attachments, setAttachments] = React.useState<AttachmentUploadFile[]>([]);
+  const [editingTicket, setEditingTicket] = React.useState<TicketType | null>(null);
+  const [auditTicket, setAuditTicket] = React.useState<TicketType | null>(null);
+  const [reminderTicket, setReminderTicket] = React.useState<TicketType | null>(null);
+  const [actionTicket, setActionTicket] = React.useState<TicketType | null>(null);
+  const [actionType, setActionType] = React.useState<"comment" | "reassign" | "forwardDepartment" | null>(null);
   const createTicket = useCreateTicket();
+  const updateTicket = useUpdateTicket();
+  const updateStatus = useUpdateTicketStatus();
+  const queryClient = useQueryClient();
   const { data: categories } = useListCategories();
   const { data: users } = useListUsers();
   const { data: ticketTypes } = useQuery({ queryKey: ["ticket-types"], queryFn: listTicketTypes });
@@ -91,6 +104,48 @@ export default function RaiseTicketPage() {
     "Due Date": ticket.dueDate || "-",
   }));
   const exportHeaders = ["Ticket No", "Subject", "Type", "Status", "Priority", "Category", "Sub Category", "Assigned To", "Created Date", "Due Date"];
+  const refreshTickets = () => queryClient.invalidateQueries({ queryKey: getListTicketsQueryKey({ myTickets: true }) });
+
+  const handleEditSave = (values: TicketEditValues) => {
+    if (!editingTicket) return;
+    updateTicket.mutate({
+      id: editingTicket.id,
+      data: {
+        subject: values.subject,
+        description: values.description || undefined,
+        priority: values.priority,
+        categoryId: values.categoryId ? Number(values.categoryId) : undefined,
+        subCategoryId: values.subCategoryId ? Number(values.subCategoryId) : undefined,
+        dueDate: values.dueDate || undefined,
+        expectedCloseDate: values.expectedCloseDate || undefined,
+        sourceDepartment: values.sourceDepartment || undefined,
+        serviceType: values.serviceType || undefined,
+        location: values.location || undefined,
+        systemType: values.systemType || undefined,
+        systemSubType: values.systemSubType || undefined,
+        reviewSchedule: values.reviewSchedule ? Number(values.reviewSchedule) : undefined,
+        reviewDuration: values.reviewDuration || undefined,
+        isExternal: values.isExternal === "true",
+        organizationName: values.organizationName || undefined,
+        providerName: values.providerName || undefined,
+        externalPersonRole: values.externalPersonRole || undefined,
+        externalPhoneNo: values.externalPhoneNo || undefined,
+        supportingPerson: values.supportingPerson || undefined,
+      } as any,
+    }, {
+      onSuccess: () => {
+        updateStatus.mutate({ id: editingTicket.id, data: { status: values.status, remarks: "Updated from raised tickets" } }, {
+          onSuccess: () => {
+            toast.success("Ticket updated");
+            setEditingTicket(null);
+            refreshTickets();
+          },
+          onError: () => toast.error("Ticket saved, but status update failed"),
+        });
+      },
+      onError: () => toast.error("Failed to update ticket"),
+    });
+  };
 
   const onSubmit = (values: z.infer<typeof ticketSchema>) => {
     const payload = { ...values };
@@ -187,7 +242,17 @@ export default function RaiseTicketPage() {
         </Card>
 
         <Card className="overflow-hidden">
-          <TicketTable tickets={recentTickets} isLoading={ticketsLoading} />
+          <TicketTable
+            tickets={recentTickets}
+            isLoading={ticketsLoading}
+            onView={(ticket) => setLocation(`/tickets/${ticket.id}`)}
+            onEdit={setEditingTicket}
+            onAudit={setAuditTicket}
+            onReminder={setReminderTicket}
+            onComment={(ticket) => { setActionTicket(ticket); setActionType("comment"); }}
+            onReassign={(ticket) => { setActionTicket(ticket); setActionType("reassign"); }}
+            onForwardDepartment={(ticket) => { setActionTicket(ticket); setActionType("forwardDepartment"); }}
+          />
           <TableControls
             total={filteredTickets.length}
             page={page}
@@ -341,6 +406,30 @@ export default function RaiseTicketPage() {
           </Form>
           </DialogContent>
         </Dialog>
+        <TicketEditDialog
+          open={!!editingTicket}
+          onOpenChange={(open) => !open && setEditingTicket(null)}
+          ticket={editingTicket}
+          onSave={handleEditSave}
+          isSaving={updateTicket.isPending || updateStatus.isPending}
+        />
+        <AuditLogDialog
+          open={!!auditTicket}
+          onOpenChange={(open) => !open && setAuditTicket(null)}
+          entityType="ticket"
+          entityId={auditTicket?.id ?? null}
+          title={`Audit Logs${auditTicket ? ` - ${auditTicket.ticketNo}` : ""}`}
+        />
+        <ReminderDialog
+          target={reminderTicket ? { entityType: "ticket", entityId: reminderTicket.id, reference: reminderTicket.ticketNo, title: reminderTicket.subject } : null}
+          onOpenChange={(open) => !open && setReminderTicket(null)}
+        />
+        <TicketActionDialog
+          ticket={actionTicket}
+          action={actionType}
+          onOpenChange={(open) => { if (!open) { setActionTicket(null); setActionType(null); } }}
+          onSaved={refreshTickets}
+        />
       </div>
     </AppLayout>
   );

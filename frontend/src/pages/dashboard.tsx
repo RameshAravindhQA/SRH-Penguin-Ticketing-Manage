@@ -11,6 +11,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserSelect } from "@/components/shared/UserSelect";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
@@ -234,13 +235,13 @@ export default function DashboardPage() {
               </label>
               <label className="flex w-[150px] flex-col gap-1">
                 <span className="text-xs font-medium text-muted-foreground">Member</span>
-                <Select value={draftFilters.member} onValueChange={value => setDraftFilters(v => ({ ...v, member: value }))}>
-                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All</SelectItem>
-                    {(users || []).map(user => <SelectItem key={user.id} value={String(user.id)}>{user.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
+                <UserSelect
+                  users={users}
+                  value={draftFilters.member}
+                  onChange={value => setDraftFilters(v => ({ ...v, member: value }))}
+                  extraOptions={[{ value: "all", label: "All" }]}
+                  className="h-8 text-xs w-full"
+                />
               </label>
               <label className="flex w-[140px] flex-col gap-1">
                 <span className="text-xs font-medium text-muted-foreground">Ticket Type</span>

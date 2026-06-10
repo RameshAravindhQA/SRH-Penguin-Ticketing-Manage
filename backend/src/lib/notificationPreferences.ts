@@ -16,6 +16,20 @@ const defaults = {
   calendarEnabled: true,
 };
 
+async function ensureNotificationPreferencesTable(): Promise<void> {
+  await qRaw(
+    `IF OBJECT_ID('notification_preferences', 'U') IS NULL
+     CREATE TABLE notification_preferences (
+       user_id INT NOT NULL PRIMARY KEY,
+       in_app_enabled BIT NOT NULL CONSTRAINT DF_notification_preferences_in_app_enabled DEFAULT 1,
+       space_enabled BIT NOT NULL CONSTRAINT DF_notification_preferences_space_enabled DEFAULT 1,
+       mail_enabled BIT NOT NULL CONSTRAINT DF_notification_preferences_mail_enabled DEFAULT 0,
+       calendar_enabled BIT NOT NULL CONSTRAINT DF_notification_preferences_calendar_enabled DEFAULT 1,
+       updated_at DATETIMEOFFSET NOT NULL CONSTRAINT DF_notification_preferences_updated_at DEFAULT SYSDATETIMEOFFSET()
+     )`,
+  );
+}
+
 function toBool(value: unknown, fallback: boolean): boolean {
   if (value == null) return fallback;
   return !!value;
@@ -33,6 +47,7 @@ function format(row: any, userId: number): NotificationPreferences {
 }
 
 export async function getNotificationPreferences(userId: number): Promise<NotificationPreferences> {
+  await ensureNotificationPreferencesTable();
   const [row] = await q`
     SELECT TOP 1 * FROM notification_preferences WHERE user_id = ${userId}
   `;
@@ -43,6 +58,7 @@ export async function upsertNotificationPreferences(
   userId: number,
   input: Partial<Omit<NotificationPreferences, "userId" | "updatedAt">>,
 ): Promise<NotificationPreferences> {
+  await ensureNotificationPreferencesTable();
   const current = await getNotificationPreferences(userId);
   const next = {
     inAppEnabled: input.inAppEnabled ?? current.inAppEnabled,

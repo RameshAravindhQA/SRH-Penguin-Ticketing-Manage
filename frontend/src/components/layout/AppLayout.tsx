@@ -10,6 +10,7 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, title = "Dashboard" }: AppLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [location] = useLocation();
 
   // Basic title mapping based on route
@@ -32,11 +33,28 @@ export function AppLayout({ children, title = "Dashboard" }: AppLayoutProps) {
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <Sidebar collapsed={collapsed} />
+      <Sidebar collapsed={collapsed} className="hidden md:flex" />
+      {mobileOpen && (
+        <div className="fixed inset-0 z-40 md:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/60"
+            aria-label="Close navigation menu"
+            onClick={() => setMobileOpen(false)}
+          />
+          <Sidebar className="relative z-10 w-[min(18rem,82vw)] shadow-2xl" onNavigate={() => setMobileOpen(false)} />
+        </div>
+      )}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <Header title={pageTitle} onMenuClick={() => setCollapsed(!collapsed)} />
+        <Header
+          title={pageTitle}
+          onMenuClick={() => {
+            if (window.matchMedia("(max-width: 767px)").matches) setMobileOpen(true);
+            else setCollapsed(!collapsed);
+          }}
+        />
         <main className="flex-1 min-h-0 overflow-hidden bg-slate-50">
-          <div className="h-full overflow-y-auto overflow-x-hidden p-4 md:p-6">
+          <div className="h-full overflow-y-auto overflow-x-hidden p-3 sm:p-4 lg:p-6">
             {children}
           </div>
         </main>

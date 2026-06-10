@@ -9,9 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { addDays, endOfMonth, endOfWeek, format, isSameDay, isSameMonth, startOfMonth, startOfWeek } from "date-fns";
-import { Calendar as CalendarIcon, Edit, ExternalLink, LayoutGrid, List, Plus, Trash2, Video } from "lucide-react";
+import { Calendar as CalendarIcon, Edit, ExternalLink, LayoutGrid, List, Plus, RefreshCw, Trash2, Video } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { UserMultiSelect } from "@/components/shared/UserSelect";
 
 type CalendarForm = {
   id?: number;
@@ -24,6 +25,12 @@ type CalendarForm = {
   entityType: string;
   entityId: string;
   attendeeIds: string[];
+};
+
+type AvailabilityResult = {
+  configured: boolean;
+  hasConflicts: boolean;
+  attendees: Array<{ email: string; displayName?: string; busy: Array<{ start: string; end: string }> }>;
 };
 
 const emptyForm: CalendarForm = {
@@ -87,6 +94,9 @@ export default function CalendarPage() {
   const [form, setForm] = React.useState<CalendarForm>(emptyForm);
   const [view, setView] = React.useState<"calendar" | "table">("calendar");
   const [saving, setSaving] = React.useState(false);
+  const [checkingAvailability, setCheckingAvailability] = React.useState(false);
+  const [availability, setAvailability] = React.useState<AvailabilityResult | null>(null);
+  const [syncingGoogle, setSyncingGoogle] = React.useState(false);
   const today = new Date();
   const monthStart = startOfMonth(today);
   const gridStart = startOfWeek(monthStart, { weekStartsOn: 1 });
@@ -106,6 +116,7 @@ export default function CalendarPage() {
   const openCreate = () => {
     const nextHour = new Date(Date.now() + 60 * 60 * 1000);
     setForm({ ...emptyForm, startDate: toLocalInput(nextHour.toISOString()) });
+    setAvailability(null);
     setDialogOpen(true);
   };
 
@@ -122,6 +133,7 @@ export default function CalendarPage() {
       entityId: event.entityId ? String(event.entityId) : "",
       attendeeIds: (event as any).attendeeIds?.map(String) || [],
     });
+    setAvailability(null);
     setDialogOpen(true);
   };
 
@@ -159,6 +171,46 @@ export default function CalendarPage() {
     }
   };
 
+  const checkAvailability = async () => {
+    if (!form.startDate || !form.attendeeIds.length) {
+      toast.error("Select start time and employees first");
+      return;
+    }
+    setCheckingAvailability(true);
+    setAvailability(null);
+    try {
+      const result = await calendarFetch("/api/calendar/availability", {
+        method: "POST",
+        body: JSON.stringify({
+          startDate: new Date(form.startDate).toISOString(),
+          endDate: form.endDate ? new Date(form.endDate).toISOString() : undefined,
+          attendeeIds: form.attendeeIds.map(Number),
+        }),
+      }) as AvailabilityResult;
+      setAvailability(result);
+      if (!result.configured) toast.info("Google Calendar is not configured");
+      else if (result.hasConflicts) toast.warning("Some employees are busy for this slot");
+      else toast.success("Selected employees look available");
+    } catch {
+      toast.error("Failed to check availability");
+    } finally {
+      setCheckingAvailability(false);
+    }
+  };
+
+  const syncFromGoogle = async () => {
+    setSyncingGoogle(true);
+    try {
+      const result = await calendarFetch("/api/calendar/google/sync", { method: "POST" }) as { checked: number; updated: number };
+      toast.success(`Google sync checked ${result.checked} event(s), updated ${result.updated}`);
+      refresh();
+    } catch {
+      toast.error("Failed to sync from Google");
+    } finally {
+      setSyncingGoogle(false);
+    }
+  };
+
   const remove = async (id: number) => {
     try {
       await calendarFetch(`/api/calendar/events/${id}`, { method: "DELETE" });
@@ -177,9 +229,14 @@ export default function CalendarPage() {
             <h2 className="text-xl font-bold tracking-tight text-foreground">{format(today, "MMMM yyyy")}</h2>
             <p className="text-sm text-muted-foreground">Manage reminders, ticket follow-ups, meetings, and Google calendar links.</p>
           </div>
-          <Button size="sm" className="gap-2" onClick={openCreate}>
-            <Plus className="h-4 w-4" /> New Reminder
-          </Button>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="gap-2" onClick={syncFromGoogle} disabled={syncingGoogle}>
+              <RefreshCw className="h-4 w-4" /> {syncingGoogle ? "Syncing..." : "Sync Google"}
+            </Button>
+            <Button size="sm" className="gap-2" onClick={openCreate}>
+              <Plus className="h-4 w-4" /> New Reminder
+            </Button>
+          </div>
         </div>
 
         <div className="flex w-fit overflow-hidden rounded-md border bg-white">
@@ -392,28 +449,35 @@ export default function CalendarPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Employees</Label>
-                <div className="grid max-h-36 grid-cols-1 gap-2 overflow-auto rounded-md border p-2 md:grid-cols-2">
-                  {users?.map(user => {
-                    const value = String(user.id);
-                    const checked = form.attendeeIds.includes(value);
-                    return (
-                      <label key={user.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(event) => setForm(current => ({
-                            ...current,
-                            attendeeIds: event.target.checked
-                              ? [...current.attendeeIds, value]
-                              : current.attendeeIds.filter(id => id !== value),
-                          }))}
-                        />
-                        <span>{user.name}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                <UserMultiSelect
+                  users={users}
+                  value={form.attendeeIds}
+                  onChange={(attendeeIds) => setForm(current => ({ ...current, attendeeIds }))}
+                />
               </div>
+              <div className="flex flex-col gap-2 rounded-md border bg-slate-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="text-sm text-muted-foreground">
+                  {availability
+                    ? availability.configured
+                      ? availability.hasConflicts
+                        ? `${availability.attendees.filter(attendee => attendee.busy.length > 0).length} employee(s) busy in this slot`
+                        : "No Google Calendar conflicts found"
+                      : "Google Calendar availability is not configured"
+                    : "Check Google Calendar before creating a meeting."}
+                </div>
+                <Button type="button" variant="outline" size="sm" onClick={checkAvailability} disabled={checkingAvailability}>
+                  {checkingAvailability ? "Checking..." : "Check Availability"}
+                </Button>
+              </div>
+              {availability?.configured && availability.hasConflicts && (
+                <div className="max-h-28 overflow-auto rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-800">
+                  {availability.attendees.filter(attendee => attendee.busy.length > 0).map(attendee => (
+                    <div key={attendee.email}>
+                      <span className="font-semibold">{attendee.displayName || attendee.email}</span>: busy
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Description</Label>
                 <Textarea value={form.description} onChange={(event) => setForm(current => ({ ...current, description: event.target.value }))} placeholder="Notes, work details, or agenda" />

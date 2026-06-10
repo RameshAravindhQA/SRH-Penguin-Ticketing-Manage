@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Activity, Flag, CheckSquare, Download } from "lucide-react";
 import { format } from "date-fns";
@@ -14,6 +13,7 @@ import {
   type ProjectActivity, type ProjectFlag, type ProjectApproval, type UserActivitySummary,
 } from "@/lib/projectApi";
 import { exportUserPDF } from "@/lib/projectExport";
+import { UserSelect } from "@/components/shared/UserSelect";
 
 export function ActivityHistory({ projectId }: { projectId: number }) {
   const queryClient = useQueryClient();
@@ -221,16 +221,7 @@ export function ActivityHistory({ projectId }: { projectId: number }) {
           <CardTitle className="text-base flex items-center justify-between">
             <span>User-wise Activity History</span>
             <div className="flex items-center gap-2">
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger className="w-48 h-8 text-xs">
-                  <SelectValue placeholder="Select user" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(users ?? []).map((u) => (
-                    <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <UserSelect users={users} value={selectedUserId} onChange={setSelectedUserId} className="w-48 h-8 text-xs" />
               <Button size="sm" variant="outline" className="gap-1 h-8 text-xs" onClick={exportSelectedUserPDF} disabled={!selectedUserId}>
                 <Download className="w-3 h-3" /> Export User PDF
               </Button>

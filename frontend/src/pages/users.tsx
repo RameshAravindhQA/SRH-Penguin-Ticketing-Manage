@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -16,6 +17,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ExportMenu, TableControls, usePagination } from "@/components/shared/TableControls";
 import { ModuleStats } from "@/components/shared/ModuleStats";
+import { permissionLabel, PERMISSION_GROUPS, togglePermission } from "@/lib/rbac";
 import { useConfirmation } from "@/components/shared/ConfirmationProvider";
 import { downloadCSVTemplate, parseCSVFile, exportToCSV, exportToExcel, exportToPDF } from "@/lib/export";
 
@@ -58,6 +60,7 @@ function userFormDefaults(user?: any) {
     password: "User@123",
     status: user?.status || "active",
     avatarUrl: user?.avatarUrl || "",
+    permissions: user?.permissions || [],
   };
 }
 
@@ -116,15 +119,45 @@ function UserDialog({ open, onOpenChange, editingUser }: { open: boolean; onOpen
   const [form, setForm] = useState(userFormDefaults(editingUser));
   const [avatarPreview, setAvatarPreview] = useState(editingUser?.avatarUrl || "");
   const [updating, setUpdating] = useState(false);
+  const [permissionSearch, setPermissionSearch] = useState("");
 
   React.useEffect(() => {
     if (!open) return;
     setForm(userFormDefaults(editingUser));
     setAvatarPreview(editingUser?.avatarUrl || "");
+    setPermissionSearch("");
   }, [open, editingUser]);
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) => setForm(f => ({ ...f, [k]: e.target.value }));
   const setS = (k: string) => (v: string) => setForm(f => ({ ...f, [k]: v }));
+  const toggleUserPermission = (permission: string) => setForm(f => ({ ...f, permissions: togglePermission(f.permissions, permission) }));
+
+  const filteredPermissionGroups = PERMISSION_GROUPS.map(group => ({
+    ...group,
+    permissions: group.permissions.filter(permission => {
+      const search = permissionSearch.trim().toLowerCase();
+      if (!search) return true;
+      return group.title.toLowerCase().includes(search) || permissionLabel(permission).toLowerCase().includes(search) || permission.toLowerCase().includes(search);
+    }),
+  })).filter(group => group.permissions.length > 0);
+
+  const visiblePermissions = filteredPermissionGroups.flatMap(group => [...group.permissions]);
+  const selectedVisibleCount = visiblePermissions.filter(permission => form.permissions.includes(permission)).length;
+
+  const setGroupPermissions = (groupPermissions: readonly string[], checked: boolean) => {
+    setForm(current => {
+      const next = new Set(current.permissions);
+      groupPermissions.forEach(permission => {
+        if (checked) next.add(permission);
+        else next.delete(permission);
+      });
+      return { ...current, permissions: [...next] };
+    });
+  };
+
+  const toggleVisiblePermissions = () => {
+    setGroupPermissions(visiblePermissions, selectedVisibleCount !== visiblePermissions.length);
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -184,20 +217,21 @@ function UserDialog({ open, onOpenChange, editingUser }: { open: boolean; onOpen
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="!flex max-h-[96dvh] max-w-[min(1120px,calc(100vw-1rem))] flex-col overflow-hidden p-0">
+        <DialogHeader className="shrink-0 border-b px-4 py-4 sm:px-6 sm:py-5">
           <DialogTitle>{editingUser ? "Edit Employee" : "Add New Employee"}</DialogTitle>
           <DialogDescription>{editingUser ? "Update employee profile, photo, role, and department assignment." : "Create a new employee account with department and role assignment."}</DialogDescription>
         </DialogHeader>
-        <div className="grid grid-cols-1 gap-5 py-2">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+        <div className="grid grid-cols-1 gap-5">
           {/* Avatar Upload */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col gap-4 rounded-lg border bg-slate-50 p-4 sm:flex-row sm:items-center">
             <div className="relative">
               <Avatar className="h-16 w-16">
                 <AvatarImage src={avatarPreview} />
                 <AvatarFallback className="bg-primary/10 text-primary text-lg">{form.name ? form.name[0]?.toUpperCase() : "?"}</AvatarFallback>
               </Avatar>
-              <button onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1 -right-1 w-6 h-6 bg-primary rounded-full flex items-center justify-center shadow">
+              <button type="button" onClick={() => avatarInputRef.current?.click()} className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary shadow focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2" aria-label="Upload profile photo">
                 <Camera className="w-3 h-3 text-white" />
               </button>
               <input ref={avatarInputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
@@ -208,11 +242,11 @@ function UserDialog({ open, onOpenChange, editingUser }: { open: boolean; onOpen
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5"><Label>Employee Code <span className="text-red-500">*</span></Label><Input value={form.employeeCode} onChange={set("employeeCode")} placeholder="EMP-007" disabled={!!editingUser} /></div>
-            <div className="space-y-1.5"><Label>Full Name <span className="text-red-500">*</span></Label><Input value={form.name} onChange={set("name")} placeholder="John Smith" /></div>
-            <div className="space-y-1.5"><Label>Email <span className="text-red-500">*</span></Label><Input type="email" value={form.email} onChange={set("email")} placeholder="john@company.com" /></div>
-            <div className="space-y-1.5"><Label>Mobile</Label><Input value={form.mobile} onChange={set("mobile")} placeholder="+91 9000000000" /></div>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="space-y-1.5"><Label htmlFor="user-employee-code">Employee Code <span className="text-red-500">*</span></Label><Input id="user-employee-code" value={form.employeeCode} onChange={set("employeeCode")} placeholder="EMP-007" disabled={!!editingUser} /></div>
+            <div className="space-y-1.5"><Label htmlFor="user-name">Full Name <span className="text-red-500">*</span></Label><Input id="user-name" value={form.name} onChange={set("name")} placeholder="John Smith" /></div>
+            <div className="space-y-1.5"><Label htmlFor="user-email">Email <span className="text-red-500">*</span></Label><Input id="user-email" type="email" value={form.email} onChange={set("email")} placeholder="john@company.com" /></div>
+            <div className="space-y-1.5"><Label htmlFor="user-mobile">Mobile</Label><Input id="user-mobile" value={form.mobile} onChange={set("mobile")} placeholder="+91 9000000000" /></div>
             <div className="space-y-1.5">
               <Label>Department</Label>
               <Select value={form.departmentId} onValueChange={setS("departmentId")}>
@@ -220,7 +254,7 @@ function UserDialog({ open, onOpenChange, editingUser }: { open: boolean; onOpen
                 <SelectContent>{departments?.map(d => <SelectItem key={d.id} value={String(d.id)}>{d.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5"><Label>Designation</Label><Input value={form.designation} onChange={set("designation")} placeholder="Senior Developer" /></div>
+            <div className="space-y-1.5"><Label htmlFor="user-designation">Designation</Label><Input id="user-designation" value={form.designation} onChange={set("designation")} placeholder="Senior Developer" /></div>
             <div className="space-y-1.5">
               <Label>System Role <span className="text-red-500">*</span></Label>
               <Select value={form.role} onValueChange={setS("role")}>
@@ -240,7 +274,7 @@ function UserDialog({ open, onOpenChange, editingUser }: { open: boolean; onOpen
                 <SelectContent>{roles?.map(r => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
-            <div className="space-y-1.5"><Label>Password</Label><Input type="password" value={form.password} onChange={set("password")} /></div>
+            <div className="space-y-1.5"><Label htmlFor="user-password">Password</Label><Input id="user-password" type="password" value={form.password} onChange={set("password")} /></div>
             <div className="space-y-1.5">
               <Label>Status</Label>
               <Select value={form.status} onValueChange={setS("status")}>
@@ -252,8 +286,84 @@ function UserDialog({ open, onOpenChange, editingUser }: { open: boolean; onOpen
               </Select>
             </div>
           </div>
+
+          <section className="space-y-4 rounded-lg border bg-slate-50 p-3 sm:p-4" aria-labelledby="user-custom-permissions">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+              <div className="space-y-1">
+                <Label id="user-custom-permissions" className="text-sm font-semibold">User-wise Custom Permissions</Label>
+                <p className="text-xs text-muted-foreground">
+                  Add direct permissions for this employee in addition to their role-based access. Leave empty to use role access only.
+                </p>
+                <p className="text-xs font-medium text-foreground">{form.permissions.length} custom permission{form.permissions.length === 1 ? "" : "s"} selected</p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Button type="button" variant="outline" size="sm" onClick={() => setForm(f => ({ ...f, permissions: [] }))} disabled={!form.permissions.length}>
+                  Clear Custom
+                </Button>
+                <Button type="button" variant="outline" size="sm" onClick={toggleVisiblePermissions} disabled={!visiblePermissions.length}>
+                  {selectedVisibleCount === visiblePermissions.length && visiblePermissions.length ? "Clear Visible" : "Select Visible"}
+                </Button>
+              </div>
+            </div>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={permissionSearch}
+                onChange={e => setPermissionSearch(e.target.value)}
+                className="pl-9"
+                placeholder="Search permissions or modules"
+                aria-label="Search user permissions"
+              />
+            </div>
+            <div className="space-y-4">
+              {filteredPermissionGroups.length ? filteredPermissionGroups.map(group => {
+                const selectedCount = group.permissions.filter(permission => form.permissions.includes(permission)).length;
+                const allSelected = selectedCount === group.permissions.length;
+                return (
+                  <div key={group.title} className="overflow-hidden rounded-lg border bg-white">
+                    <div className="flex flex-col gap-3 border-b bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="text-sm font-semibold text-foreground">{group.title}</div>
+                        <div className="text-xs text-muted-foreground">{selectedCount} of {group.permissions.length} selected</div>
+                      </div>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => setGroupPermissions(group.permissions, !allSelected)}>
+                        {allSelected ? "Clear group" : "Select group"}
+                      </Button>
+                    </div>
+                    <div className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
+                      {group.permissions.map(permission => {
+                        const checked = form.permissions.includes(permission);
+                        return (
+                          <label
+                            key={permission}
+                            className="flex min-h-12 cursor-pointer items-start gap-3 rounded-md border border-slate-200 bg-white p-3 text-sm transition hover:border-primary/40 hover:bg-primary/5 has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
+                          >
+                            <Checkbox
+                              checked={checked}
+                              onCheckedChange={() => toggleUserPermission(permission)}
+                              aria-label={permissionLabel(permission)}
+                              className="mt-0.5 h-5 w-5"
+                            />
+                            <span className="min-w-0 leading-5">
+                              <span className="block font-medium text-foreground">{permissionLabel(permission)}</span>
+                              <span className="block break-words font-mono text-[11px] text-muted-foreground">{permission}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              }) : (
+                <div className="rounded-lg border border-dashed bg-white p-8 text-center text-sm text-muted-foreground">
+                  No permissions match your search.
+                </div>
+              )}
+            </div>
+          </section>
         </div>
-        <DialogFooter>
+        </div>
+        <DialogFooter className="shrink-0 gap-2 border-t px-4 py-4 sm:px-6">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
           <Button onClick={handleSubmit} disabled={createUser.isPending || updating}>{createUser.isPending || updating ? "Saving..." : editingUser ? "Save Employee" : "Create Employee"}</Button>
         </DialogFooter>

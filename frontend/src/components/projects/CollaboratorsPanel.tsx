@@ -12,6 +12,7 @@ import {
   projectFetch, PROJECT_ROLES, PROJECT_PERMISSIONS,
   type ProjectCollaborator, type ProjectPermission,
 } from "@/lib/projectApi";
+import { UserSelect } from "@/components/shared/UserSelect";
 
 export function CollaboratorsPanel({ projectId, ownerId }: { projectId: number; ownerId: number | null }) {
   const queryClient = useQueryClient();
@@ -96,16 +97,7 @@ export function CollaboratorsPanel({ projectId, ownerId }: { projectId: number; 
       </CardHeader>
       <CardContent className="py-4 space-y-4">
         <div className="flex flex-col sm:flex-row gap-2 rounded-md border bg-slate-50 p-3">
-          <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-            <SelectTrigger className="sm:w-56 bg-white">
-              <SelectValue placeholder="Select user" />
-            </SelectTrigger>
-            <SelectContent>
-              {availableUsers.map((u) => (
-                <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <UserSelect users={availableUsers} value={selectedUserId} onChange={setSelectedUserId} className="sm:w-56" />
           <Select value={selectedRole} onValueChange={setSelectedRole}>
             <SelectTrigger className="sm:w-40 bg-white">
               <SelectValue placeholder="Role" />

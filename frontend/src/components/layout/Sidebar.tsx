@@ -41,13 +41,14 @@ const NAV_ITEMS = [
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 
-export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
+export function Sidebar({ collapsed = false, className, onNavigate }: { collapsed?: boolean; className?: string; onNavigate?: () => void }) {
   const [location] = useLocation();
 
   return (
     <div className={cn(
       "h-screen bg-sidebar text-sidebar-foreground transition-all duration-300 flex flex-col",
-      collapsed ? "w-16" : "w-64"
+      collapsed ? "w-16" : "w-64",
+      className
     )}>
       <div className="h-16 flex items-center justify-center border-b border-sidebar-border">
         {collapsed ? (
@@ -66,7 +67,7 @@ export function Sidebar({ collapsed = false }: { collapsed?: boolean }) {
             return (
               <li key={item.href}>
                 <Link href={item.href}>
-                  <div className={cn(
+                  <div onClick={onNavigate} className={cn(
                     "flex items-center gap-3 px-3 py-2 rounded-md transition-colors cursor-pointer",
                     isActive 
                       ? "bg-primary text-primary-foreground" 

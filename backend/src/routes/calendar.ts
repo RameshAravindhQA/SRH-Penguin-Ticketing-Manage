@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { q, qRaw } from "@workspace/db";
 import { authMiddleware } from "../lib/auth";
-import { deleteGoogleCalendarEvent, syncCalendarEventToGoogle } from "../lib/googleIntegration";
+import { checkGoogleAvailability, deleteGoogleCalendarEvent, pullGoogleEventIntoLocal, pullKnownGoogleEventsIntoLocal, syncCalendarEventToGoogle } from "../lib/googleIntegration";
+import { getNotificationPreferences } from "../lib/notificationPreferences";
 
 const router = Router();
 
@@ -28,10 +29,52 @@ function formatEvent(e: any) {
   };
 }
 
+async function syncToGoogleIfEnabled(userId: number, input: Parameters<typeof syncCalendarEventToGoogle>[0]) {
+  const preferences = await getNotificationPreferences(userId);
+  if (!preferences.calendarEnabled) return;
+  await syncCalendarEventToGoogle(input);
+}
+
 router.get("/calendar/events", authMiddleware, async (req, res): Promise<void> => {
   const authUser = (req as any).user;
   const events = await q`SELECT * FROM calendar_events WHERE user_id = ${authUser.userId} ORDER BY start_date ASC`;
   res.json(events.map(formatEvent));
+});
+
+router.post("/calendar/availability", authMiddleware, async (req, res): Promise<void> => {
+  const { startDate, endDate, attendeeIds } = req.body ?? {};
+  if (!startDate) { res.status(400).json({ error: "startDate required" }); return; }
+  const result = await checkGoogleAvailability({
+    startDate,
+    endDate,
+    attendeeIds: Array.isArray(attendeeIds) ? attendeeIds.map(Number) : [],
+  });
+  if (!result) { res.status(502).json({ error: "Google availability check failed" }); return; }
+  res.json({
+    ...result,
+    hasConflicts: result.attendees.some(attendee => attendee.busy.length > 0),
+  });
+});
+
+router.post("/calendar/google/webhook", async (req, res): Promise<void> => {
+  const expectedToken = process.env.GOOGLE_CALENDAR_WEBHOOK_TOKEN;
+  const providedToken = req.header("x-goog-channel-token");
+  if (expectedToken && providedToken !== expectedToken) {
+    res.status(401).json({ error: "Invalid Google channel token" });
+    return;
+  }
+  const resourceId = req.header("x-goog-resource-id") ?? null;
+  const googleEventId = req.header("x-srh-google-event-id") || req.query.googleEventId;
+  if (typeof googleEventId === "string" && googleEventId) {
+    await pullGoogleEventIntoLocal(googleEventId);
+  } else {
+    await pullKnownGoogleEventsIntoLocal();
+  }
+  res.json({ ok: true, resourceId });
+});
+
+router.post("/calendar/google/sync", authMiddleware, async (_req, res): Promise<void> => {
+  res.json(await pullKnownGoogleEventsIntoLocal());
 });
 
 router.post("/calendar/events", authMiddleware, async (req, res): Promise<void> => {
@@ -44,7 +87,7 @@ router.post("/calendar/events", authMiddleware, async (req, res): Promise<void> 
     VALUES (${authUser.userId}, ${title}, ${description ?? null}, ${new Date(startDate)}, ${endDate ? new Date(endDate) : null},
             ${type}, ${entityType ?? null}, ${entityId ?? null}, ${meetingLink ?? null},
             ${Array.isArray(attendeeIds) ? attendeeIds.join(",") : attendeeIds ?? null}, SYSDATETIMEOFFSET())`;
-  await syncCalendarEventToGoogle({
+  await syncToGoogleIfEnabled(authUser.userId, {
     localEventId: (event as any).id,
     title,
     description,
@@ -78,7 +121,7 @@ router.patch("/calendar/events/:id", authMiddleware, async (req, res): Promise<v
   if (!sets.length) { res.status(400).json({ error: "No fields" }); return; }
   const [event] = await qRaw(`UPDATE calendar_events SET ${sets.join(", ")} OUTPUT INSERTED.* WHERE id = @id AND user_id = @uid`, params);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
-  await syncCalendarEventToGoogle({
+  await syncToGoogleIfEnabled(authUser.userId, {
     localEventId: (event as any).id,
     title: (event as any).title,
     description: (event as any).description ?? null,

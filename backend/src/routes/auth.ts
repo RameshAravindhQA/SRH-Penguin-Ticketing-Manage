@@ -9,10 +9,11 @@ import {
   signToken,
 } from "../lib/auth";
 import { createAuditLog } from "../lib/audit";
+import { permissionsForUser, normalizePermissions, RBAC_PERMISSIONS } from "../lib/rbac";
 
 const router = Router();
 
-export function formatUser(u: any, deptName: string | null) {
+export function formatUser(u: any, deptName: string | null, permissions: string[] = []) {
   return {
     id: u.id,
     employeeCode: u.employeeCode,
@@ -28,6 +29,7 @@ export function formatUser(u: any, deptName: string | null) {
     reportingManagerName: null,
     avatarUrl: u.avatarUrl ?? null,
     status: u.status,
+    permissions: normalizePermissions(permissions),
     lastLogin: u.lastLogin instanceof Date ? u.lastLogin.toISOString() : u.lastLogin ?? null,
     createdAt: u.createdAt instanceof Date ? u.createdAt.toISOString() : u.createdAt,
   };
@@ -70,7 +72,8 @@ router.post("/auth/login", async (req, res): Promise<void> => {
     const [d] = await q<{ name: string }>`SELECT TOP 1 name FROM departments WHERE id = ${user.departmentId}`;
     deptName = d?.name ?? null;
   }
-  res.json({ token, user: formatUser(user, deptName) });
+  const permissions = await permissionsForUser({ userId: user.id, role: user.role, email: user.email });
+  res.json({ token, user: formatUser(user, deptName, [...permissions]) });
 });
 
 router.post("/auth/logout", authMiddleware, async (req, res): Promise<void> => {
@@ -90,7 +93,8 @@ router.get("/auth/me", authMiddleware, async (req, res): Promise<void> => {
     const [d] = await q<{ name: string }>`SELECT TOP 1 name FROM departments WHERE id = ${user.departmentId}`;
     deptName = d?.name ?? null;
   }
-  res.json(formatUser(user, deptName));
+  const permissions = await permissionsForUser({ userId: user.id, role: user.role, email: user.email });
+  res.json(formatUser(user, deptName, [...permissions]));
 });
 
 router.post("/auth/change-password", authMiddleware, async (req, res): Promise<void> => {
@@ -110,7 +114,7 @@ function localBypassUser() {
     id: 1, employeeCode: "EMP-001", name: "Local Admin", email: "admin@company.com",
     mobile: null, departmentId: 1, departmentName: "Local Development", designation: "Administrator",
     role: "admin", roleId: 1, reportingManagerId: null, reportingManagerName: null, avatarUrl: null,
-    status: "active", lastLogin: new Date().toISOString(), createdAt: new Date().toISOString(),
+    status: "active", permissions: [...RBAC_PERMISSIONS], lastLogin: new Date().toISOString(), createdAt: new Date().toISOString(),
   };
 }
 

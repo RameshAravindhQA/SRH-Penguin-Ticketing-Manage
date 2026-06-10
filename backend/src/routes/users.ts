@@ -5,6 +5,7 @@ import type { User } from "@workspace/db";
 import { authMiddleware } from "../lib/auth";
 import { createAuditLog } from "../lib/audit";
 import { formatUser } from "./auth";
+import { defaultPermissionsForRole, ensureRolePermissionsColumn, normalizePermissions } from "../lib/rbac";
 
 const router = Router();
 
@@ -23,7 +24,8 @@ async function enrichUser(u: any) {
     const [m] = await q<{ name: string }>`SELECT TOP 1 name FROM users WHERE id = ${u.reportingManagerId}`;
     managerName = m?.name ?? null;
   }
-  return { ...formatUser(u, deptName), reportingManagerName: managerName };
+  const permissions = normalizePermissions((u as any).permissions);
+  return { ...formatUser(u, deptName, permissions), reportingManagerName: managerName };
 }
 
 router.get("/users", authMiddleware, async (req, res): Promise<void> => {
@@ -76,16 +78,17 @@ router.get("/users/tree", authMiddleware, async (req, res): Promise<void> => {
 });
 
 router.post("/users", authMiddleware, async (req, res): Promise<void> => {
-  const { employeeCode, name, email, mobile, departmentId, designation, role, roleId, reportingManagerId, password, status, avatarUrl } = req.body;
+  const { employeeCode, name, email, mobile, departmentId, designation, role, roleId, reportingManagerId, password, status, avatarUrl, permissions } = req.body;
   if (!employeeCode || !name || !email || !role) { res.status(400).json({ error: "Missing required fields" }); return; }
   const hash = await bcrypt.hash(password ?? "Password@123", 12);
+  const normalizedPermissions = normalizePermissions(permissions);
   const [user] = await q<User>`
     INSERT INTO users (employee_code, name, email, password_hash, mobile, department_id, designation, role, role_id,
-      reporting_manager_id, avatar_url, status, is_hardware_user, is_call_center_user, created_at, updated_at)
+      reporting_manager_id, permissions, avatar_url, status, is_hardware_user, is_call_center_user, created_at, updated_at)
     OUTPUT INSERTED.*
     VALUES (${employeeCode}, ${name}, ${email}, ${hash}, ${mobile ?? null}, ${departmentId ?? null},
             ${designation ?? null}, ${role}, ${roleId ?? null}, ${reportingManagerId ?? null},
-            ${avatarUrl ?? null}, ${status ?? "active"}, 0, 0, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET())`;
+            ${normalizedPermissions.length ? JSON.stringify(normalizedPermissions) : null}, ${avatarUrl ?? null}, ${status ?? "active"}, 0, 0, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET())`;
   const authUser = (req as any).user;
   await createAuditLog({ action: "create", entityType: "user", entityId: user.id, entityRef: user.employeeCode, userId: authUser.userId, newValue: { name, email } });
   res.status(201).json(await enrichUser(user));
@@ -100,7 +103,7 @@ router.get("/users/:id", authMiddleware, async (req, res): Promise<void> => {
 
 router.patch("/users/:id", authMiddleware, async (req, res): Promise<void> => {
   const id = paramId(req.params.id);
-  const { name, email, mobile, departmentId, designation, role, roleId, reportingManagerId, status, avatarUrl } = req.body;
+  const { name, email, mobile, departmentId, designation, role, roleId, reportingManagerId, status, avatarUrl, permissions } = req.body;
   const sets: string[] = [];
   const params: Record<string, any> = { id };
   if (name != null) { sets.push("name = @name"); params.name = name; }
@@ -112,6 +115,7 @@ router.patch("/users/:id", authMiddleware, async (req, res): Promise<void> => {
   if (roleId != null) { sets.push("role_id = @roleId"); params.roleId = roleId; }
   if (reportingManagerId != null) { sets.push("reporting_manager_id = @rmId"); params.rmId = reportingManagerId; }
   if (avatarUrl !== undefined) { sets.push("avatar_url = @avatar"); params.avatar = avatarUrl || null; }
+  if (permissions !== undefined) { sets.push("permissions = @permissions"); params.permissions = permissions ? JSON.stringify(normalizePermissions(permissions)) : null; }
   if (status != null) { sets.push("status = @status"); params.status = status; }
   if (!sets.length) { res.status(400).json({ error: "No fields to update" }); return; }
   sets.push("updated_at = SYSDATETIMEOFFSET()");
@@ -175,31 +179,44 @@ router.delete("/departments/:id", authMiddleware, async (req, res): Promise<void
 // ── Roles ────────────────────────────────────────────────────────────────────
 
 router.get("/roles", authMiddleware, async (_req, res): Promise<void> => {
+  await ensureRolePermissionsColumn();
   const roles = await q`SELECT * FROM roles`;
-  res.json(roles.map((r: any) => ({ id: r.id, name: r.name, description: r.description ?? null, level: r.level, createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt })));
+  res.json(roles.map((r: any) => ({
+    id: r.id,
+    name: r.name,
+    description: r.description ?? null,
+    level: r.level,
+    permissions: normalizePermissions(r.permissions).length ? normalizePermissions(r.permissions) : defaultPermissionsForRole(r.name, r.level),
+    createdAt: r.createdAt instanceof Date ? r.createdAt.toISOString() : r.createdAt,
+  })));
 });
 
 router.post("/roles", authMiddleware, async (req, res): Promise<void> => {
-  const { name, description, level } = req.body;
+  await ensureRolePermissionsColumn();
+  const { name, description, level, permissions } = req.body;
   if (!name || level == null) { res.status(400).json({ error: "Name and level required" }); return; }
+  const normalizedPermissions = normalizePermissions(permissions);
   const [role] = await q`
-    INSERT INTO roles (name, description, level, created_at, updated_at)
+    INSERT INTO roles (name, description, level, permissions, created_at, updated_at)
     OUTPUT INSERTED.*
-    VALUES (${name}, ${description ?? null}, ${level}, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET())`;
-  res.status(201).json({ id: role.id, name: role.name, description: role.description ?? null, level: role.level, createdAt: role.createdAt instanceof Date ? role.createdAt.toISOString() : role.createdAt });
+    VALUES (${name}, ${description ?? null}, ${level}, ${JSON.stringify(normalizedPermissions.length ? normalizedPermissions : defaultPermissionsForRole(name, Number(level)))}, SYSDATETIMEOFFSET(), SYSDATETIMEOFFSET())`;
+  res.status(201).json({ id: role.id, name: role.name, description: role.description ?? null, level: role.level, permissions: normalizePermissions(role.permissions), createdAt: role.createdAt instanceof Date ? role.createdAt.toISOString() : role.createdAt });
 });
 
 router.patch("/roles/:id", authMiddleware, async (req, res): Promise<void> => {
+  await ensureRolePermissionsColumn();
   const id = paramId(req.params.id);
-  const { name, description, level } = req.body;
+  const { name, description, level, permissions } = req.body;
   const sets: string[] = ["updated_at = SYSDATETIMEOFFSET()"];
   const params: Record<string, any> = { id };
   if (name) { sets.push("name = @name"); params.name = name; }
   if (description != null) { sets.push("description = @desc"); params.desc = description; }
   if (level != null) { sets.push("level = @level"); params.level = level; }
+  if (permissions !== undefined) { sets.push("permissions = @permissions"); params.permissions = JSON.stringify(normalizePermissions(permissions)); }
   const [role] = await qRaw(`UPDATE roles SET ${sets.join(", ")} OUTPUT INSERTED.* WHERE id = @id`, params);
   if (!role) { res.status(404).json({ error: "Role not found" }); return; }
-  res.json({ id: role.id, name: role.name, description: role.description ?? null, level: role.level, createdAt: role.createdAt instanceof Date ? role.createdAt.toISOString() : role.createdAt });
+  const normalizedPermissions = normalizePermissions(role.permissions);
+  res.json({ id: role.id, name: role.name, description: role.description ?? null, level: role.level, permissions: normalizedPermissions.length ? normalizedPermissions : defaultPermissionsForRole(role.name, role.level), createdAt: role.createdAt instanceof Date ? role.createdAt.toISOString() : role.createdAt });
 });
 
 router.delete("/roles/:id", authMiddleware, async (req, res): Promise<void> => {

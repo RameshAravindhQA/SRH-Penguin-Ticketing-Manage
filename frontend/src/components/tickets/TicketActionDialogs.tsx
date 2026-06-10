@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { UserSelect } from "@/components/shared/UserSelect";
 
 type ActionType = "comment" | "reassign" | "forwardDepartment";
 
@@ -136,12 +137,7 @@ export function TicketActionDialog({
           {action === "reassign" && (
             <div className="space-y-1.5">
               <Label>User</Label>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger><SelectValue placeholder="Select user" /></SelectTrigger>
-                <SelectContent>
-                  {users?.map(user => <SelectItem key={user.id} value={String(user.id)}>{user.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <UserSelect users={users} value={selectedUserId} onChange={setSelectedUserId} className="w-full" />
             </div>
           )}
           {action === "forwardDepartment" && (

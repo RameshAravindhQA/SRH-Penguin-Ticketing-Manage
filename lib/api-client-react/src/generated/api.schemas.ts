@@ -39,6 +39,7 @@ export interface User {
   /** @nullable */
   avatarUrl?: string | null;
   status: string;
+  permissions: string[];
   /** @nullable */
   lastLogin?: string | null;
   createdAt: string;
@@ -67,6 +68,7 @@ export interface UserInput {
   password?: string;
   status?: string;
   avatarUrl?: string;
+  permissions?: string[];
 }
 
 export interface UserUpdate {
@@ -80,6 +82,7 @@ export interface UserUpdate {
   reportingManagerId?: number;
   avatarUrl?: string;
   status?: string;
+  permissions?: string[] | null;
 }
 
 export interface Department {
@@ -107,6 +110,7 @@ export interface Role {
   /** @nullable */
   description?: string | null;
   level?: number;
+  permissions: string[];
   createdAt: string;
 }
 
@@ -114,6 +118,7 @@ export interface RoleInput {
   name: string;
   description?: string;
   level: number;
+  permissions?: string[];
 }
 
 export interface Category {

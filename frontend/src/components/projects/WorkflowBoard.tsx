@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { GitBranch, Plus, Play, CheckCircle2, Trash2, ArrowRight } from "lucide-react";
 import { projectFetch, formatDuration, type WorkflowNode } from "@/lib/projectApi";
+import { UserSelect } from "@/components/shared/UserSelect";
 
 const STATUS_VARIANT: Record<string, string> = {
   pending: "bg-slate-100 text-slate-700",
@@ -118,16 +119,7 @@ export function WorkflowBoard({ projectId }: { projectId: number }) {
               ))}
             </SelectContent>
           </Select>
-          <Select value={assignedToId} onValueChange={setAssignedToId}>
-            <SelectTrigger className="sm:w-44 bg-white">
-              <SelectValue placeholder="Assign to (optional)" />
-            </SelectTrigger>
-            <SelectContent>
-              {(users ?? []).map((u) => (
-                <SelectItem key={u.id} value={String(u.id)}>{u.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <UserSelect users={users} value={assignedToId} onChange={setAssignedToId} placeholder="Assign to (optional)" className="sm:w-44" />
           <Button size="sm" className="gap-2" onClick={addNode}>
             <Plus className="w-4 h-4" /> Add Node
           </Button>

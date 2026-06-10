@@ -41,6 +41,7 @@ const statements = [
      role NVARCHAR(80) NOT NULL,
      role_id INT NULL,
      reporting_manager_id INT NULL,
+     permissions NVARCHAR(MAX) NULL,
      avatar_url NVARCHAR(MAX) NULL,
      status NVARCHAR(40) NOT NULL CONSTRAINT DF_users_status DEFAULT 'active',
      user_type NVARCHAR(80) NULL,
@@ -53,6 +54,8 @@ const statements = [
      created_at DATETIMEOFFSET NOT NULL CONSTRAINT DF_users_created_at DEFAULT SYSDATETIMEOFFSET(),
      updated_at DATETIMEOFFSET NOT NULL CONSTRAINT DF_users_updated_at DEFAULT SYSDATETIMEOFFSET()
    )`,
+  `IF COL_LENGTH('users', 'permissions') IS NULL
+   ALTER TABLE users ADD permissions NVARCHAR(MAX) NULL`,
   `IF OBJECT_ID('categories', 'U') IS NULL
    CREATE TABLE categories (
      id INT IDENTITY(1,1) PRIMARY KEY,

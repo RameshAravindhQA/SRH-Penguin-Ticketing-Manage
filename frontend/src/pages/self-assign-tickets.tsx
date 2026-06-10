@@ -16,6 +16,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserSelect } from "@/components/shared/UserSelect";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -147,15 +148,14 @@ function TicketDialog({
           </div>
           <div className="space-y-1.5">
             <Label>Assign Team Leader / Manager</Label>
-            <Select value={form.assignedToId || "self"} onValueChange={(value) => setForm((current) => ({ ...current, assignedToId: value === "self" ? "" : value }))}>
-              <SelectTrigger><SelectValue placeholder="Select team leader or manager" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="self">Assign to me</SelectItem>
-                {assignUsers.map((user) => (
-                  <SelectItem key={user.id} value={String(user.id)}>{user.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <UserSelect
+              users={assignUsers}
+              value={form.assignedToId || "self"}
+              onChange={(value) => setForm((current) => ({ ...current, assignedToId: value === "self" ? "" : value }))}
+              placeholder="Select team leader or manager"
+              extraOptions={[{ value: "self", label: "Assign to me" }]}
+              className="w-full"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Category</Label>

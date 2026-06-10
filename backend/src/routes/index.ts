@@ -12,6 +12,7 @@ import calendarRouter from "./calendar";
 import timesheetsRouter from "./timesheets";
 import auditRouter from "./audit";
 import documentsRouter from "./documents";
+import googleChatBotRouter from "./googleChatBot";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use(calendarRouter);
 router.use(timesheetsRouter);
 router.use(auditRouter);
 router.use(documentsRouter);
+router.use(googleChatBotRouter);
 
 export default router;

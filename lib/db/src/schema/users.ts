@@ -21,6 +21,7 @@ export type Role = {
   name: string;
   description: string | null;
   level: number;
+  permissions: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -37,6 +38,7 @@ export type User = {
   role: string;
   roleId: number | null;
   reportingManagerId: number | null;
+  permissions: string | null;
   avatarUrl: string | null;
   status: string;
   userType: string | null;

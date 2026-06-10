@@ -17,6 +17,7 @@ import { BellRing, Edit, Plus, Search, Trash2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useConfirmation } from "@/components/shared/ConfirmationProvider";
+import { UserMultiSelect } from "@/components/shared/UserSelect";
 
 type ReminderForm = {
   id?: number;
@@ -335,31 +336,11 @@ export default function RemindersPage() {
               </div>
               <div className="space-y-1.5">
                 <Label>Employees</Label>
-                <div className="grid max-h-40 grid-cols-1 gap-2 overflow-auto rounded-md border p-2 md:grid-cols-2">
-                  {users?.map((user: any) => {
-                    const value = String(user.id);
-                    const checked = form.attendeeIds.includes(value);
-                    return (
-                      <label key={user.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-slate-50">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(event) => setForm(current => ({
-                            ...current,
-                            attendeeIds: event.target.checked
-                              ? [...current.attendeeIds, value]
-                              : current.attendeeIds.filter(id => id !== value),
-                          }))}
-                        />
-                        <Avatar className="h-6 w-6">
-                          <AvatarImage src={user.avatarUrl || ""} />
-                          <AvatarFallback className="text-[10px]">{user.name.substring(0, 2).toUpperCase()}</AvatarFallback>
-                        </Avatar>
-                        <span>{user.name}</span>
-                      </label>
-                    );
-                  })}
-                </div>
+                <UserMultiSelect
+                  users={users}
+                  value={form.attendeeIds}
+                  onChange={(attendeeIds) => setForm(current => ({ ...current, attendeeIds }))}
+                />
               </div>
               <div className="space-y-1.5">
                 <Label>Description</Label>
