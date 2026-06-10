@@ -1,13 +1,3 @@
-import { defineConfig } from "drizzle-kit";
-
-if (!process.env.DATABASE_URL) {
-  throw new Error("DATABASE_URL, ensure the database is provisioned");
-}
-
-export default defineConfig({
-  schema: "./src/schema/index.ts",
-  dialect: "postgresql",
-  dbCredentials: {
-    url: process.env.DATABASE_URL,
-  },
-});
+// Drizzle Kit is not used with SQL Server.
+// Schema is applied via: pnpm --filter @workspace/db run migrate
+export default {};

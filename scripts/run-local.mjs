@@ -13,12 +13,16 @@ const commands = {
     args: ["--filter", "@workspace/enterprise-app", "run", "dev"],
     env: { ...baseEnv, PORT: baseEnv.FRONTEND_PORT },
   },
-  "db-push": {
-    args: ["--filter", "@workspace/db", "run", "push"],
+  "db-reset": {
+    args: ["--filter", "@workspace/db", "run", "reset"],
+    env: baseEnv,
+  },
+  "db-migrate": {
+    args: ["--filter", "@workspace/db", "run", "migrate"],
     env: baseEnv,
   },
   "db-seed": {
-    args: ["--filter", "@workspace/scripts", "run", "seed"],
+    args: ["--filter", "@workspace/db", "run", "seed"],
     env: baseEnv,
   },
 };
@@ -26,7 +30,7 @@ const commands = {
 const command = commands[target];
 
 if (!command) {
-  console.error("Usage: node ./scripts/run-local.mjs <backend|frontend|db-push|db-seed>");
+  console.error("Usage: node ./scripts/run-local.mjs <backend|frontend|db-reset|db-migrate|db-seed>");
   process.exit(1);
 }
 

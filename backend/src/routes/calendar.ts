@@ -1,28 +1,36 @@
 import { Router } from "express";
-import { db, calendarEventsTable } from "@workspace/db";
-import { eq, and, sql } from "drizzle-orm";
+import { q, qRaw } from "@workspace/db";
 import { authMiddleware } from "../lib/auth";
+import { deleteGoogleCalendarEvent, syncCalendarEventToGoogle } from "../lib/googleIntegration";
 
 const router = Router();
+
+function paramId(value: string | string[]): number {
+  return parseInt(Array.isArray(value) ? value[0] : value, 10);
+}
 
 function formatEvent(e: any) {
   return {
     id: e.id, title: e.title, description: e.description ?? null,
-    startDate: e.startDate.toISOString(),
-    endDate: e.endDate?.toISOString() ?? null,
+    startDate: e.startDate instanceof Date ? e.startDate.toISOString() : e.startDate,
+    endDate: e.endDate instanceof Date ? e.endDate.toISOString() : e.endDate ?? null,
     type: e.type,
     entityType: e.entityType ?? null, entityId: e.entityId ?? null,
-    meetingLink: e.meetingLink ?? null,
-    attendeeIds: e.attendeeIds ? e.attendeeIds.split(",").filter(Boolean).map((id: string) => Number(id)) : [],
-    createdAt: e.createdAt.toISOString(),
+    meetingLink: e.googleMeetLink ?? e.meetingLink ?? null,
+    googleEventId: e.googleEventId ?? null,
+    googleMeetLink: e.googleMeetLink ?? null,
+    googleHtmlLink: e.googleHtmlLink ?? null,
+    googleSyncStatus: e.googleSyncStatus ?? null,
+    googleSyncError: e.googleSyncError ?? null,
+    googleSyncedAt: e.googleSyncedAt instanceof Date ? e.googleSyncedAt.toISOString() : e.googleSyncedAt ?? null,
+    attendeeIds: e.attendeeIds ? String(e.attendeeIds).split(",").filter(Boolean).map(Number) : [],
+    createdAt: e.createdAt instanceof Date ? e.createdAt.toISOString() : e.createdAt,
   };
 }
 
 router.get("/calendar/events", authMiddleware, async (req, res): Promise<void> => {
   const authUser = (req as any).user;
-  const events = await db.select().from(calendarEventsTable)
-    .where(eq(calendarEventsTable.userId, authUser.userId))
-    .orderBy(sql`${calendarEventsTable.startDate} asc`);
+  const events = await q`SELECT * FROM calendar_events WHERE user_id = ${authUser.userId} ORDER BY start_date ASC`;
   res.json(events.map(formatEvent));
 });
 
@@ -30,44 +38,68 @@ router.post("/calendar/events", authMiddleware, async (req, res): Promise<void> 
   const authUser = (req as any).user;
   const { title, description, startDate, endDate, type, meetingLink, entityType, entityId, attendeeIds } = req.body;
   if (!title || !startDate || !type) { res.status(400).json({ error: "Title, startDate and type required" }); return; }
-  const [event] = await db.insert(calendarEventsTable).values({
-    userId: authUser.userId,
+  const [event] = await q`
+    INSERT INTO calendar_events (user_id, title, description, start_date, end_date, type, entity_type, entity_id, meeting_link, attendee_ids, created_at)
+    OUTPUT INSERTED.*
+    VALUES (${authUser.userId}, ${title}, ${description ?? null}, ${new Date(startDate)}, ${endDate ? new Date(endDate) : null},
+            ${type}, ${entityType ?? null}, ${entityId ?? null}, ${meetingLink ?? null},
+            ${Array.isArray(attendeeIds) ? attendeeIds.join(",") : attendeeIds ?? null}, SYSDATETIMEOFFSET())`;
+  await syncCalendarEventToGoogle({
+    localEventId: (event as any).id,
     title,
-    description: description ?? null,
-    startDate: new Date(startDate),
-    endDate: endDate ? new Date(endDate) : null,
+    description,
+    startDate,
+    endDate,
     type,
-    entityType: entityType ?? null,
-    entityId: entityId ?? null,
-    meetingLink: meetingLink ?? null,
-    attendeeIds: Array.isArray(attendeeIds) ? attendeeIds.join(",") : attendeeIds ?? null,
-  }).returning();
-  res.status(201).json(formatEvent(event));
+    entityType,
+    entityId,
+    attendeeIds: Array.isArray(attendeeIds) ? attendeeIds.map(Number) : [],
+    createMeet: true,
+  });
+  const [syncedEvent] = await q`SELECT TOP 1 * FROM calendar_events WHERE id = ${(event as any).id}`;
+  res.status(201).json(formatEvent(syncedEvent ?? event));
 });
 
 router.patch("/calendar/events/:id", authMiddleware, async (req, res): Promise<void> => {
   const authUser = (req as any).user;
-  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const id = paramId(req.params.id);
   const { title, description, startDate, endDate, type, meetingLink, entityType, entityId, attendeeIds } = req.body;
-  const [event] = await db.update(calendarEventsTable).set({
-    ...(title ? { title } : {}),
-    ...(description !== undefined ? { description: description || null } : {}),
-    ...(startDate ? { startDate: new Date(startDate) } : {}),
-    ...(endDate !== undefined ? { endDate: endDate ? new Date(endDate) : null } : {}),
-    ...(type ? { type } : {}),
-    ...(meetingLink !== undefined ? { meetingLink: meetingLink || null } : {}),
-    ...(attendeeIds !== undefined ? { attendeeIds: Array.isArray(attendeeIds) ? attendeeIds.join(",") : attendeeIds || null } : {}),
-    ...(entityType !== undefined ? { entityType: entityType || null } : {}),
-    ...(entityId !== undefined ? { entityId: entityId ? Number(entityId) : null } : {}),
-  }).where(and(eq(calendarEventsTable.id, id), eq(calendarEventsTable.userId, authUser.userId))).returning();
+  const sets: string[] = [];
+  const params: Record<string, any> = { id, uid: authUser.userId };
+  if (title) { sets.push("title = @title"); params.title = title; }
+  if (description !== undefined) { sets.push("description = @desc"); params.desc = description || null; }
+  if (startDate) { sets.push("start_date = @sd"); params.sd = new Date(startDate); }
+  if (endDate !== undefined) { sets.push("end_date = @ed"); params.ed = endDate ? new Date(endDate) : null; }
+  if (type) { sets.push("type = @type"); params.type = type; }
+  if (meetingLink !== undefined) { sets.push("meeting_link = @ml"); params.ml = meetingLink || null; }
+  if (attendeeIds !== undefined) { sets.push("attendee_ids = @aids"); params.aids = Array.isArray(attendeeIds) ? attendeeIds.join(",") : attendeeIds || null; }
+  if (entityType !== undefined) { sets.push("entity_type = @et"); params.et = entityType || null; }
+  if (entityId !== undefined) { sets.push("entity_id = @eid"); params.eid = entityId ? Number(entityId) : null; }
+  if (!sets.length) { res.status(400).json({ error: "No fields" }); return; }
+  const [event] = await qRaw(`UPDATE calendar_events SET ${sets.join(", ")} OUTPUT INSERTED.* WHERE id = @id AND user_id = @uid`, params);
   if (!event) { res.status(404).json({ error: "Event not found" }); return; }
-  res.json(formatEvent(event));
+  await syncCalendarEventToGoogle({
+    localEventId: (event as any).id,
+    title: (event as any).title,
+    description: (event as any).description ?? null,
+    startDate: (event as any).startDate,
+    endDate: (event as any).endDate ?? null,
+    type: (event as any).type,
+    entityType: (event as any).entityType ?? null,
+    entityId: (event as any).entityId ?? null,
+    attendeeIds: (event as any).attendeeIds ? String((event as any).attendeeIds).split(",").filter(Boolean).map(Number) : [],
+    createMeet: true,
+  });
+  const [syncedEvent] = await q`SELECT TOP 1 * FROM calendar_events WHERE id = ${(event as any).id}`;
+  res.json(formatEvent(syncedEvent ?? event));
 });
 
 router.delete("/calendar/events/:id", authMiddleware, async (req, res): Promise<void> => {
   const authUser = (req as any).user;
-  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  await db.delete(calendarEventsTable).where(and(eq(calendarEventsTable.id, id), eq(calendarEventsTable.userId, authUser.userId)));
+  const id = paramId(req.params.id);
+  const [event] = await q<{ googleEventId: string | null }>`SELECT TOP 1 google_event_id AS googleEventId FROM calendar_events WHERE id = ${id} AND user_id = ${authUser.userId}`;
+  await q`DELETE FROM calendar_events WHERE id = ${id} AND user_id = ${authUser.userId}`;
+  await deleteGoogleCalendarEvent(event?.googleEventId);
   res.sendStatus(204);
 });
 

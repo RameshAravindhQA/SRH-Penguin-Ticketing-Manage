@@ -12,10 +12,34 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const localBypassEnabled =
+  import.meta.env.DEV && import.meta.env.VITE_BYPASS_LOGIN === "true";
+const localBypassToken = "local-dev-bypass-token";
+const localBypassUser: User = {
+  id: 1,
+  employeeCode: "EMP-001",
+  name: "Local Admin",
+  email: "admin@company.com",
+  mobile: null,
+  departmentId: 1,
+  departmentName: "Local Development",
+  designation: "Administrator",
+  role: "admin",
+  roleId: 1,
+  reportingManagerId: null,
+  reportingManagerName: null,
+  avatarUrl: null,
+  status: "active",
+  lastLogin: new Date().toISOString(),
+  createdAt: new Date().toISOString(),
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setToken] = useState<string | null>(localStorage.getItem("auth_token"));
+  const [token, setToken] = useState<string | null>(
+    localBypassEnabled ? localBypassToken : localStorage.getItem("auth_token"),
+  );
   const [user, setUser] = useState<User | null>(() => {
+    if (localBypassEnabled) return localBypassUser;
     const saved = localStorage.getItem("auth_user");
     return saved ? JSON.parse(saved) : null;
   });
@@ -42,6 +66,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function verifySavedToken() {
+      if (localBypassEnabled) {
+        setToken(localBypassToken);
+        setUser(localBypassUser);
+        setAuthChecked(true);
+        return;
+      }
+
       if (!token) {
         setAuthChecked(true);
         return;
@@ -86,6 +117,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = () => {
+    if (localBypassEnabled) {
+      toast.info("Login bypass is enabled for local development");
+      setLocation("/dashboard");
+      return;
+    }
+
     setToken(null);
     setUser(null);
     toast.success("Signed out successfully");

@@ -8,9 +8,12 @@
     "dev:backend": "node ./scripts/run-local.mjs backend",
     "dev:frontend": "node ./scripts/run-local.mjs frontend",
     "db:create": "node ./scripts/create-db.mjs",
-    "db:push": "node ./scripts/run-local.mjs db-push",
+    "db:reset": "node ./scripts/run-local.mjs db-reset",
+    "db:migrate": "node ./scripts/run-local.mjs db-migrate",
+    "db:push": "node ./scripts/run-local.mjs db-migrate",
     "db:seed": "node ./scripts/run-local.mjs db-seed",
     "setup:local": "pnpm install && pnpm run db:create && pnpm run db:push && pnpm run db:seed",
+    "setup:supabase": "pnpm install && pnpm run db:push && pnpm run db:seed",
     "build": "pnpm run typecheck && pnpm --filter ./backend run build && pnpm --filter ./frontend run build",
     "typecheck:libs": "tsc --build",
     "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./backend\" --filter \"./frontend\" --filter \"./scripts\" --if-present run typecheck"

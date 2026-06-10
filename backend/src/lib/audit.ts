@@ -1,5 +1,4 @@
-import { db } from "@workspace/db";
-import { auditLogsTable } from "@workspace/db";
+import { q } from "@workspace/db";
 import { logger } from "./logger";
 
 interface AuditOptions {
@@ -15,16 +14,11 @@ interface AuditOptions {
 
 export async function createAuditLog(opts: AuditOptions): Promise<void> {
   try {
-    await db.insert(auditLogsTable).values({
-      action: opts.action,
-      entityType: opts.entityType,
-      entityId: opts.entityId ?? null,
-      entityRef: opts.entityRef ?? null,
-      userId: opts.userId,
-      oldValue: opts.oldValue != null ? JSON.stringify(opts.oldValue) : null,
-      newValue: opts.newValue != null ? JSON.stringify(opts.newValue) : null,
-      ipAddress: opts.ipAddress ?? null,
-    });
+    await q`INSERT INTO audit_logs (action, entity_type, entity_id, entity_ref, user_id, old_value, new_value, ip_address, created_at)
+             VALUES (${opts.action}, ${opts.entityType}, ${opts.entityId ?? null}, ${opts.entityRef ?? null},
+                     ${opts.userId}, ${opts.oldValue != null ? JSON.stringify(opts.oldValue) : null},
+                     ${opts.newValue != null ? JSON.stringify(opts.newValue) : null},
+                     ${opts.ipAddress ?? null}, SYSDATETIMEOFFSET())`;
   } catch (err) {
     logger.error({ err }, "Failed to create audit log");
   }

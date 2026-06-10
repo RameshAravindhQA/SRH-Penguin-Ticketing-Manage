@@ -11,7 +11,7 @@ Install these tools first:
 - Node.js 20 or newer
 - pnpm 10 or newer
 - Git
-- PostgreSQL 14 or newer
+- PostgreSQL 14 or newer, or a Supabase Postgres project
 
 Check the installs:
 
@@ -70,9 +70,9 @@ VITE_API_BASE_URL=http://localhost:6001
 
 Update the PostgreSQL username, password, host, or port if your local PostgreSQL setup is different.
 
-### 4. Start PostgreSQL
+### 4. Configure PostgreSQL
 
-Make sure PostgreSQL is running before database setup.
+For local PostgreSQL, make sure PostgreSQL is running before database setup.
 
 On Windows, you can usually start it from the Services app or from pgAdmin. On macOS or Linux, use your normal PostgreSQL service command.
 
@@ -88,9 +88,26 @@ Exit `psql` with:
 \q
 ```
 
+For Supabase, use the connection string from:
+
+```text
+Supabase Dashboard -> Project Settings -> Database -> Connection string -> Transaction pooler
+```
+
+Set `.env.local` like this, replacing the project ref, password, and host/region with your Supabase values:
+
+```env
+DATABASE_URL=postgresql://postgres.<project-ref>:<password>@aws-1-us-east-1.pooler.supabase.com:6543/<database-name>?sslmode=no-verify
+POSTGRES_ADMIN_URL=postgresql://postgres.<project-ref>:<password>@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=no-verify
+```
+
+For your current setup, `<database-name>` is `penguin`.
+
+If your password contains symbols, URL-encode it before adding it to the URL.
+
 ### 5. Install dependencies and prepare the database
 
-Run the full local setup:
+For local PostgreSQL, run the full local setup:
 
 ```bash
 pnpm run setup:local
@@ -98,11 +115,18 @@ pnpm run setup:local
 
 This command installs dependencies, creates the `penguin` database if needed, pushes the database schema, and seeds starter data.
 
+For Supabase, the database already exists, so run:
+
+```bash
+pnpm run setup:supabase
+```
+
+This installs dependencies, pushes the schema to Supabase, and seeds starter data.
+
 If you need to run the steps manually:
 
 ```bash
 pnpm install
-pnpm run db:create
 pnpm run db:push
 pnpm run db:seed
 ```
@@ -136,6 +160,15 @@ Username: EMP-001
 Password: Admin@123
 ```
 
+For local UI work only, login can be bypassed by setting these values in `.env.local`:
+
+```env
+BYPASS_LOGIN=true
+VITE_BYPASS_LOGIN=true
+```
+
+Restart backend and frontend after changing those values. The bypass is disabled automatically in production builds.
+
 ### Useful Commands
 
 Run only the backend:
@@ -168,4 +201,3 @@ If the database already exists and you only need to refresh tables and seed data
 pnpm run db:push
 pnpm run db:seed
 ```
-
